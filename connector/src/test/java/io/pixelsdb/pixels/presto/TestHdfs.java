@@ -48,7 +48,7 @@ public class TestHdfs {
 
     /**
      * @ClassName: TestHdfs
-     * @Title: reference: [Java访问HDFS中的数据块](https://www.cnblogs.com/zhangyinhua/p/7695700.html#_lab2_1_0)
+     * @Title: reference: https://www.cnblogs.com/zhangyinhua/p/7695700.html#_lab2_1_0
      * @Description: reading block info from namenode
      * @param:
      * @author: tao

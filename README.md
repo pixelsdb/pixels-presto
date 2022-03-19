@@ -9,6 +9,8 @@ with the Connector SPI in Presto 0.215 should also work well with Pixels.
 
 This project can be opened as a maven project in Intellij and built using maven.
 
+**Note** that Presto 0.215 requires Java 8, thus this project must be build by Jdk 8.
+
 However, [Pixels](https://github.com/pixelsdb/pixels) is the parent of this project, 
 therefore use `mvn install` to install Pixels modules into your local maven repository,
 before building this project.
