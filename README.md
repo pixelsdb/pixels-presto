@@ -5,6 +5,14 @@ This is the Pixels integration for PrestoDB.
 Pixels integration (connector & event listener) is currently compatible with Presto 0.215. Other Presto versions that are compatible
 with the Connector SPI in Presto 0.215 should also work well with Pixels.
 
+## Build
+
+This project can be opened as a maven project in Intellij and built using maven.
+
+However, [Pixels](https://github.com/pixelsdb/pixels) is the parent of this project, 
+therefore use `mvn install` to install Pixels modules into your local maven repository,
+before building this project.
+
 ## Use Pixels in Presto
 
 Ensure that Pixels and other prerequisites are installed following the instructions
@@ -12,7 +20,7 @@ Ensure that Pixels and other prerequisites are installed following the instructi
 
 ### Install Pixels Connector
 There are two important directories in the home of presto-server: `etc` and `plugin`.
-To install Pixels connector, decompress `pixels-presto-*.zip` into the `plugin` directory.
+To install Pixels connector, decompress `pixels-presto-connector-*.zip` into the `plugin` directory.
 The `etc` directory contains the configuration files of Presto.
 In addition to the configurations mentioned in the official docs, 
 create the catalog config file named `pixels.properties` for Pixels in the `etc/catalog` directory, with the following content:
@@ -25,7 +33,7 @@ pixels.home=/home/ubuntu/opt/pixels/
 
 ### Install Pixels Event Listener*
 Pixels event listener is optional. It is used to collect the query completion information for performance evaluations.
-To install the event listener, decompress `pixels-listener-*.zip` into the `plugin` directory.
+To install the event listener, decompress `pixels-presto-listener-*.zip` into the `plugin` directory.
 
 Create the listener config file named `event-listener.properties` in the `etc` directory, with the following content:
 ```properties
