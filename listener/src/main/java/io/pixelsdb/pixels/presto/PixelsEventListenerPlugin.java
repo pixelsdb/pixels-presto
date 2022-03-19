@@ -17,31 +17,29 @@
  * License along with Pixels.  If not, see
  * <https://www.gnu.org/licenses/>.
  */
-package io.pixelsdb.pixels.listener.exception;
+package io.pixelsdb.pixels.presto;
 
-import com.facebook.presto.spi.ErrorCode;
-import com.facebook.presto.spi.ErrorCodeSupplier;
-import com.facebook.presto.spi.ErrorType;
+import com.facebook.presto.spi.Plugin;
+import com.facebook.presto.spi.eventlistener.EventListenerFactory;
 
-import static com.facebook.presto.spi.ErrorType.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 
-public enum ListenerErrorCode
-        implements ErrorCodeSupplier
+/**
+ * Created at: 18-12-9
+ * Author: hank
+ */
+public class PixelsEventListenerPlugin implements Plugin
 {
-    PIXELS_EVENT_LISTENER_ERROR(1, EXTERNAL),
-    PIXELS_EVENT_LISTENER_METRIC_ERROR(2, EXTERNAL)
-    /**/;
-
-    private final ErrorCode errorCode;
-
-    ListenerErrorCode(int code, ErrorType type)
-    {
-        errorCode = new ErrorCode(code + 0x0100_0000, name(), type);
-    }
-
     @Override
-    public ErrorCode toErrorCode()
+    public Iterable<EventListenerFactory> getEventListenerFactories()
     {
-        return errorCode;
+        EventListenerFactory listenerFactory = new PixelsEventListenerFactory();
+        List<EventListenerFactory> listenerFactoryList = new ArrayList<>();
+        listenerFactoryList.add(listenerFactory);
+        List<EventListenerFactory> immutableList = Collections.unmodifiableList(listenerFactoryList);
+
+        return immutableList;
     }
 }

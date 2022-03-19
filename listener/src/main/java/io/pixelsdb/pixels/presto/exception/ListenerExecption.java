@@ -17,7 +17,7 @@
  * License along with Pixels.  If not, see
  * <https://www.gnu.org/licenses/>.
  */
-package io.pixelsdb.pixels.listener.exception;
+package io.pixelsdb.pixels.presto.exception;
 
 /**
  * Created at: 18-12-9

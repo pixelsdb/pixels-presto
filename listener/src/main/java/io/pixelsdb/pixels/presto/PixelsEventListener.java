@@ -17,12 +17,12 @@
  * License along with Pixels.  If not, see
  * <https://www.gnu.org/licenses/>.
  */
-package io.pixelsdb.pixels.listener;
+package io.pixelsdb.pixels.presto;
 
 import io.pixelsdb.pixels.common.utils.ConfigFactory;
 import io.pixelsdb.pixels.common.utils.DateUtil;
 import io.pixelsdb.pixels.common.utils.HttpUtil;
-import io.pixelsdb.pixels.listener.exception.ListenerExecption;
+import io.pixelsdb.pixels.presto.exception.ListenerExecption;
 import com.alibaba.fastjson.JSONObject;
 import com.alibaba.fastjson.parser.ParserConfig;
 import com.facebook.presto.spi.PrestoException;
@@ -36,8 +36,8 @@ import java.io.BufferedWriter;
 import java.io.FileWriter;
 import java.io.IOException;
 
-import static io.pixelsdb.pixels.listener.exception.ListenerErrorCode.PIXELS_EVENT_LISTENER_ERROR;
-import static io.pixelsdb.pixels.listener.exception.ListenerErrorCode.PIXELS_EVENT_LISTENER_METRIC_ERROR;
+import static io.pixelsdb.pixels.presto.exception.ListenerErrorCode.PIXELS_EVENT_LISTENER_ERROR;
+import static io.pixelsdb.pixels.presto.exception.ListenerErrorCode.PIXELS_EVENT_LISTENER_METRIC_ERROR;
 
 /**
  * Created at: 18-12-8
