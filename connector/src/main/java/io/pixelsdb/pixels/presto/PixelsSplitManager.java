@@ -118,7 +118,7 @@ public class PixelsSplitManager
         }
 
         /**
-         * Issue #78:
+         * PIXELS-78:
          * Only try to use cache for the cached table.
          * By avoiding cache probing for uncached tables, query performance on
          * uncached tables is improved significantly (10%-20%).
@@ -135,7 +135,7 @@ public class PixelsSplitManager
         }
 
         /**
-         * Issue #169:
+         * PIXELS-169:
          * We use session properties to configure if the ordered and compact layout path are enabled.
          */
         boolean orderedPathEnabled = PixelsSessionProperties.getOrderedPathEnabled(session);
@@ -236,8 +236,9 @@ public class PixelsSplitManager
                     // 1. get version
                     cacheVersion = keyValue.getValue().toString(StandardCharsets.UTF_8);
                     logger.debug("cache version: " + cacheVersion);
-                    // 2. get files of each node
-                    List<KeyValue> nodeFiles = etcdUtil.getKeyValuesByPrefix(Constants.CACHE_LOCATION_LITERAL + cacheVersion);
+                    // 2. get the cached files of each node
+                    List<KeyValue> nodeFiles = etcdUtil.getKeyValuesByPrefix(
+                            Constants.CACHE_LOCATION_LITERAL + cacheVersion);
                     if(nodeFiles.size() > 0)
                     {
                         Map<String, String> fileToNodeMap = new HashMap<>();
@@ -257,19 +258,11 @@ public class PixelsSplitManager
                             if (orderedPathEnabled)
                             {
                                 List<String> orderedPaths = storage.listPaths(layout.getOrderPath());
-                                /*
-                                Balancer orderedBalancer = new Balancer();
-                                for (Path path : orderedPaths) {
-                                    List<HostAddress> hostAddresses = fsFactory.getBlockLocations(path, 0, Long.MAX_VALUE);
-                                    orderedBalancer.put(hostAddresses.get(0), path);
-                                }
-                                orderedBalancer.balance();
-                                */
 
                                 int numPath = orderedPaths.size();
                                 for (int i = 0; i < numPath; ++i)
                                 {
-                                    int firstPath = i;
+                                    int firstPath = i; // the path of the first ordered file in the split.
                                     List<String> paths = new ArrayList<>(this.multiSplitForOrdered ? splitSize : 1);
                                     if (this.multiSplitForOrdered)
                                     {
@@ -281,16 +274,15 @@ public class PixelsSplitManager
                                     {
                                         paths.add(orderedPaths.get(i));
                                     }
-                                    // ImmutableList.Builder<HostAddress> builder = ImmutableList.builder();
-                                    // builder.add(orderedBalancer.get(orderedPaths.get(firstPath)));
 
+                                    // We do not cache files in the ordered path, thus get locations from the storage.
                                     List<HostAddress> orderedAddresses = toHostAddresses(
                                             storage.getLocations(orderedPaths.get(firstPath)));
 
                                     PixelsSplit pixelsSplit = new PixelsSplit(connectorId,
                                             tableHandle.getSchemaName(), tableHandle.getTableName(),
                                             table.getStorageScheme(), paths, transHandle.getTransId(),
-                                            0, 1, false, orderedAddresses,
+                                            0, 1, false, storage.hasLocality(), orderedAddresses,
                                             order.getColumnOrder(), new ArrayList<>(0), constraint);
                                     // log.debug("Split in orderPath: " + pixelsSplit.toString());
                                     pixelsSplits.add(pixelsSplit);
@@ -308,23 +300,27 @@ public class PixelsSplitManager
                                     {
                                         String node = fileToNodeMap.get(path);
                                         List<HostAddress> compactAddresses;
+                                        boolean ensureLocality;
                                         if (node == null)
                                         {
+                                            // this file is not cached, get the locations from the storage.
                                             compactAddresses = toHostAddresses(storage.getLocations(path));
+                                            ensureLocality = storage.hasLocality();
                                         } else
                                         {
                                             // this file is cached.
                                             ImmutableList.Builder<HostAddress> builder = ImmutableList.builder();
                                             builder.add(HostAddress.fromString(node));
                                             compactAddresses = builder.build();
+                                            ensureLocality = true;
                                         }
 
                                         PixelsSplit pixelsSplit = new PixelsSplit(connectorId,
                                                 tableHandle.getSchemaName(), tableHandle.getTableName(),
                                                 table.getStorageScheme(), Arrays.asList(path),
                                                 transHandle.getTransId(), curFileRGIdx, splitSize,
-                                                true, compactAddresses, order.getColumnOrder(),
-                                                cacheColumnletOrders, constraint);
+                                                true, ensureLocality, compactAddresses,
+                                                order.getColumnOrder(), cacheColumnletOrders, constraint);
                                         pixelsSplits.add(pixelsSplit);
                                         // log.debug("Split in compactPath" + pixelsSplit.toString());
                                         curFileRGIdx += splitSize;
@@ -357,16 +353,7 @@ public class PixelsSplitManager
                     if (orderedPathEnabled)
                     {
                         List<String> orderedPaths = storage.listPaths(layout.getOrderPath());
-                        /*
-                        Balancer orderedBalancer = new Balancer();
-                        for (Path path : orderedPaths)
-                        {
-                            List<HostAddress> addresses = fsFactory.getBlockLocations(path, 0, Long.MAX_VALUE);
-                            orderedBalancer.put(addresses.get(0), path);
-                        }
-                        orderedBalancer.balance();
-                        log.info("ordered files balanced=" + orderedBalancer.isBalanced());
-                        */
+
                         int numPath = orderedPaths.size();
                         for (int i = 0; i < numPath; ++i)
                         {
@@ -382,16 +369,16 @@ public class PixelsSplitManager
                             {
                                 paths.add(orderedPaths.get(i));
                             }
-                            // ImmutableList.Builder<HostAddress> builder = ImmutableList.builder();
-                            // builder.add(orderedBalancer.get(orderedPaths.get(firstPath)));
 
-                            List<HostAddress> orderedAddresses = toHostAddresses(storage.getLocations(orderedPaths.get(firstPath)));
+                            List<HostAddress> orderedAddresses = toHostAddresses(
+                                    storage.getLocations(orderedPaths.get(firstPath)));
+
                             PixelsSplit pixelsSplit = new PixelsSplit(connectorId,
                                     tableHandle.getSchemaName(), tableHandle.getTableName(),
                                     table.getStorageScheme(), paths, transHandle.getTransId(),
-                                    0, 1, false, orderedAddresses,
+                                    0, 1, false, storage.hasLocality(), orderedAddresses,
                                     order.getColumnOrder(), new ArrayList<>(0), constraint);
-                            // log.debug("Split in orderPath: " + pixelsSplit.toString());
+                            // logger.debug("Split in orderPath: " + pixelsSplit.toString());
                             pixelsSplits.add(pixelsSplit);
                         }
                     }
@@ -399,35 +386,21 @@ public class PixelsSplitManager
                     if (compactPathEnabled)
                     {
                         List<String> compactPaths = storage.listPaths(compactPath);
-                        /*
-                        Balancer compactBalancer = new Balancer();
-                        for (Path path : compactPaths)
-                        {
-                            List<HostAddress> addresses = fsFactory.getBlockLocations(path, 0, Long.MAX_VALUE);
-                            compactBalancer.put(addresses.get(0), path);
-                        }
-                        compactBalancer.balance();
-                        log.info("compact files balanced=" + compactBalancer.isBalanced());
-                        */
+
                         int curFileRGIdx;
                         for (String path : compactPaths)
                         {
-                            /*
-                            ImmutableList.Builder<HostAddress> builder = ImmutableList.builder();
-                            builder.add(compactBalancer.get(path));
-                            log.info("balanced path:" + compactBalancer.get(path).toString());
-                            List<HostAddress> hostAddresses = builder.build();
-                            */
                             curFileRGIdx = 0;
                             while (curFileRGIdx < rowGroupNum)
                             {
                                 List<HostAddress> compactAddresses = toHostAddresses(storage.getLocations(path));
+
                                 PixelsSplit pixelsSplit = new PixelsSplit(connectorId,
                                         tableHandle.getSchemaName(), tableHandle.getTableName(),
                                         table.getStorageScheme(), Arrays.asList(path),
                                         transHandle.getTransId(), curFileRGIdx, splitSize,
-                                        false, compactAddresses, order.getColumnOrder(),
-                                        new ArrayList<>(0), constraint);
+                                        false, storage.hasLocality(), compactAddresses,
+                                        order.getColumnOrder(), new ArrayList<>(0), constraint);
                                 pixelsSplits.add(pixelsSplit);
                                 curFileRGIdx += splitSize;
                             }

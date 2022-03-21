@@ -80,7 +80,7 @@ public class PixelsConnector
     public ConnectorTransactionHandle beginTransaction(IsolationLevel isolationLevel, boolean readOnly)
     {
         /**
-         * Issue #172:
+         * PIXELS-172:
          * Be careful that Presto does not set readOnly to true for normal queries.
          */
         QueryTransInfo info;

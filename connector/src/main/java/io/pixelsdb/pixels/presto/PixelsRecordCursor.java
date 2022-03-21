@@ -343,7 +343,7 @@ public class PixelsRecordCursor implements RecordCursor
                 return ((LongColumnVector) this.rowBatch.cols[field]).vector[this.rowIndex];
             case DECIMAL:
                 /**
-                 * Issue #196:
+                 * PIXELS-196:
                  * Presto call getLong here to get the unscaled value for decimal type.
                  * The precision and scale of decimal are automatically processed by Presto.
                  */

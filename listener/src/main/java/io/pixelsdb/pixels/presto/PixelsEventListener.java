@@ -59,7 +59,7 @@ public class PixelsEventListener implements EventListener
     {
         ParserConfig.getGlobalInstance().setAutoTypeSupport(true);
         /**
-         * Issue #87:
+         * PIXELS-87:
          * Get the gc threshold here.
          */
         String thresholdStr = ConfigFactory.Instance().getProperty("pixels.gc.threshold");
@@ -112,7 +112,7 @@ public class PixelsEventListener implements EventListener
         double total = Runtime.getRuntime().totalMemory();
 
         /**
-         * Issue #87:
+         * PIXELS-87:
          * Do explicit gc here, instead of in PixelsReaderImpl.close().
          */
         long gcms = -1;
@@ -129,7 +129,7 @@ public class PixelsEventListener implements EventListener
         }
 
         /**
-         * Issue #132:
+         * PIXELS-132:
          * TODO: add full gc count and time to the output.
          * TODO: add cpu and memory statistics to the output.
          * TODO: make use of resource estimates.

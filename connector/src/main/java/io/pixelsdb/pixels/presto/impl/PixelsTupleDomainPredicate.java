@@ -42,7 +42,7 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
 /**
- * Issue #208:
+ * PIXELS-208:
  * This was originally the io.pixelsdb.pixels.core.predicate.TupleDomainPixelsPredicate in pixels-core.
  */
 
@@ -80,7 +80,7 @@ public class PixelsTupleDomainPredicate<C>
     public boolean matches(long numberOfRows, Map<Integer, ColumnStats> statisticsByColumnIndex)
     {
         /**
-         * Issue #103:
+         * PIXELS-103:
          * We firstly check if this predicate matches all column statistics.
          * Because according to the implementation of TupleDomain in Presto-0.192,
          * even if matchesAll(), e.i TupleDomain.isAll() returns true, the domains
@@ -105,7 +105,7 @@ public class PixelsTupleDomainPredicate<C>
         Map<C, Domain> domains = optionalDomains.get();
 
         /**
-         * Issue #103:
+         * PIXELS-103:
          * bugs fixed:
          * 1. return true if there is a match (origin: return false if there is a mismatch).
          * 2. finally return false by default (origin: turn true).
@@ -135,7 +135,7 @@ public class PixelsTupleDomainPredicate<C>
     }
 
     /**
-     * Added in Issue #103.
+     * Added in PIXELS-103.
      * This method relies on TupleDomain.isNone() in presto spi,
      * which is mysterious.
      * TODO: pay attention to the correctness of this method.
@@ -148,7 +148,7 @@ public class PixelsTupleDomainPredicate<C>
     }
 
     /**
-     * Added in Issue #103.
+     * Added in PIXELS-103.
      * This method relies on TupleDomain.isNone() in presto spi,
      * which is mysterious.
      * TODO: pay attention to the correctness of this method.
@@ -178,7 +178,7 @@ public class PixelsTupleDomainPredicate<C>
         if (!columnDomain.overlaps(predicateDomain))
         {
             /**
-             * Issue #103:
+             * PIXELS-103:
              * Even if column domain and predicate domain do not overlap,
              * they can match if either of them is onlyNull while the other
              * one is nullAllowed.
@@ -191,7 +191,7 @@ public class PixelsTupleDomainPredicate<C>
         }
 
         /**
-         * Issue #103:
+         * PIXELS-103:
          * 1. No need to process discrete values. Discrete values and ranges will not coexist. However either
          * of them has been considered in the Domain.overlaps() method above.
          *
@@ -254,7 +254,7 @@ public class PixelsTupleDomainPredicate<C>
 
         if (columnStats == null)
         {
-            // Issue #103: we have avoided columnStat == null in upper layers of call stack.
+            // PIXELS-103: we have avoided columnStat == null in upper layers of call stack.
             // return Domain.all(type);
             throw new PixelsReaderException("column statistic is null");
         }
@@ -295,21 +295,21 @@ public class PixelsTupleDomainPredicate<C>
         else if (type instanceof DateType)
         {
             /**
-             * Issue #103: add Date type predicate.
+             * PIXELS-103: add Date type predicate.
              */
             return createDomain(type, hasNullValue, (DateColumnStats) columnStats);
         }
         else if (type instanceof  TimeType)
         {
             /**
-             * Issue #103: add Time type predicate.
+             * PIXELS-103: add Time type predicate.
              */
             return createDomain(type, hasNullValue, (TimeColumnStats) columnStats);
         }
         else if (type.getJavaType() == long.class)
         {
             /**
-             * Issue #208:
+             * PIXELS-208:
              * Besides integer types, decimal type also goes here as decimal in Presto
              * is backed by long. In Pixels, we also use IntegerColumnStats for decimal
              * columns. If needed in other places, integer statistics can be manually converted
@@ -322,7 +322,7 @@ public class PixelsTupleDomainPredicate<C>
             return createDomain(type, hasNullValue, (DoubleColumnStats) columnStats);
         }
         /**
-         * Issue #103:
+         * PIXELS-103:
          * Type unmatched, we should through an exception here instead of returning
          * a domain that can match any predicate.
          */
@@ -334,13 +334,13 @@ public class PixelsTupleDomainPredicate<C>
     private <T extends Comparable<T>> Domain createDomain(Type type, boolean hasNullValue,
                                                           RangeStats<T> rangeStats)
     {
-        // Issue #103: what's the purpose of this if branch?
+        // PIXELS-103: what's the purpose of this if branch?
         //if (type instanceof VarcharType || type instanceof CharType)
         //{
         //    return createDomain(type, hasNullValue, rangeStats, value -> value);
         //}
         // return createDomain(type, hasNullValue, rangeStats, value -> value);
-        // Issue #103: avoid additional function call.
+        // PIXELS-103: avoid additional function call.
         T min = rangeStats.getMinimum();
         T max = rangeStats.getMaximum();
 
@@ -361,7 +361,7 @@ public class PixelsTupleDomainPredicate<C>
         }
 
         /**
-         * Comments added in Issue #103:
+         * Comments added in PIXELS-103:
          * If no min nor max is defined, we create a column domain to accepted any predicate.
          */
         return Domain.create(ValueSet.all(type), hasNullValue);
