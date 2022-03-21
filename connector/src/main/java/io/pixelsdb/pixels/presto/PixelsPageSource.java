@@ -232,7 +232,7 @@ class PixelsPageSource implements ConnectorPageSource
     public long getSystemMemoryUsage()
     {
         /**
-         * Issue #113:
+         * PIXELS-113:
          * I am still not sure show the result of this method are used by Presto.
          * Currently, we return the cumulative memory usage. However this may be
          * inappropriate.
@@ -346,7 +346,7 @@ class PixelsPageSource implements ConnectorPageSource
                 }
                 pixelsReader.close();
                 /**
-                 * Issue #114:
+                 * PIXELS-114:
                  * Must set pixelsReader and recordReader to null,
                  * close() may be called multiple times by Presto.
                  */
@@ -427,7 +427,7 @@ class PixelsPageSource implements ConnectorPageSource
                     break;
                 case DECIMAL:
                     /**
-                     * Issue #196:
+                     * PIXELS-196:
                      * Presto reads the unscaled values for decimal type here.
                      * The precision and scale of decimal are automatically processed by Presto.
                      */
@@ -473,13 +473,13 @@ class PixelsPageSource implements ConnectorPageSource
                     block = new ByteArrayBlock(batchSize, Optional.ofNullable(bcv.isNull), bcv.vector);
                     break;
                 case DATE:
-                    // Issue #94: add date type.
+                    // PIXELS-94: add date type.
                     DateColumnVector dtcv = (DateColumnVector) vector;
                     // In pixels and Presto, date is stored as the number of days from UTC 1970-1-1 0:0:0.
                     block = new IntArrayBlock(batchSize, Optional.ofNullable(dtcv.isNull), dtcv.dates);
                     break;
                 case TIME:
-                    // Issue #94: add time type.
+                    // PIXELS-94: add time type.
                     TimeColumnVector tcv = (TimeColumnVector) vector;
                     /**
                      * In Presto, LongArrayBlock is used for time type. However, in Pixels,
@@ -491,7 +491,7 @@ class PixelsPageSource implements ConnectorPageSource
                 case TIMESTAMP:
                     TimestampColumnVector tscv = (TimestampColumnVector) vector;
                     /**
-                     * Issue #94: we have confirmed that LongArrayBlock is used for timestamp
+                     * PIXELS-94: we have confirmed that LongArrayBlock is used for timestamp
                      * type in Presto.
                      *
                      * com.facebook.presto.spi.type.TimestampType extends

@@ -102,7 +102,7 @@ public class PixelsPrestoConfig
             try
             {
                 /**
-                 * Issue #108:
+                 * PIXELS-108:
                  * We reload the storage here, because in other classes like
                  * PixelsSplitManager, when we try to create storage instance
                  * by StorageFactory.Instance().getStorage(), Presto does not

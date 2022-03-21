@@ -170,7 +170,7 @@ public class PixelsMetadata
             for (String schema : schemaNames)
             {
                 /**
-                 * Issue #179:
+                 * PIXELS-179:
                  * Only try to get table names if the schema exists.
                  * 'show tables' in information_schema also invokes this method.
                  * In this case, information_schema does not exist in the metadata,
@@ -233,7 +233,7 @@ public class PixelsMetadata
             try
             {
                 /**
-                 * Issue #183:
+                 * PIXELS-183:
                  * Return an empty result if the table does not exist.
                  * This is possible when reading the content of information_schema tables.
                  */
@@ -408,7 +408,7 @@ public class PixelsMetadata
             for (String schema : schemaNames)
             {
                 /**
-                 * Issue #194:
+                 * PIXELS-194:
                  * Only try to get view names if the schema exists.
                  * 'show tables' in information_schema also invokes this method.
                  * In this case, information_schema does not exist in the metadata,
@@ -440,7 +440,7 @@ public class PixelsMetadata
             if (this.pixelsMetadataProxy.existSchema(schemaName))
             {
                 /**
-                 * Issue #194:
+                 * PIXELS-194:
                  * Only try to get views if the schema exists.
                  * Otherwise, return an empty set, which is required by Presto
                  * when reading the content of information_schema tables.

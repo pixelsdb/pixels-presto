@@ -63,7 +63,7 @@ public class VarcharArrayBlock implements Block
 
     private final long retainedSizeInBytes;
     /**
-     * Issue #167:
+     * PIXELS-167:
      * The actual memory footprint of the member values.
      */
     private final long retainedSizeOfValues;
@@ -161,7 +161,7 @@ public class VarcharArrayBlock implements Block
     protected final int getPositionOffset(int position)
     {
         /**
-         * Issue #132:
+         * PIXELS-132:
          * FIX: null must be checked here as offsets (i.e. starts) in column vector
          * may be reused in vectorized row batch and is not reset.
          */
@@ -181,7 +181,7 @@ public class VarcharArrayBlock implements Block
     {
         checkReadablePosition(position);
         /**
-         * Issue #132:
+         * PIXELS-132:
          * FIX: null must be checked here as lengths (i.e. lens) in column vector
          * may be reused in vectorized row batch and is not reset.
          */
@@ -278,7 +278,7 @@ public class VarcharArrayBlock implements Block
     public void retainedBytesForEachPart(BiConsumer<Object, Long> consumer)
     {
         /**
-         * Issue #167:
+         * PIXELS-167:
          * DO NOT calculate the retained size of values by adding up values[i].length.
          */
         consumer.accept(values, retainedSizeOfValues);

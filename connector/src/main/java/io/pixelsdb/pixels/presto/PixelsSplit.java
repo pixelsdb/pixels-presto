@@ -48,6 +48,7 @@ public class PixelsSplit
     private final int len;
     private int pathIndex;
     private boolean cached;
+    private boolean ensureLocality;
     private final List<HostAddress> addresses;
     private final List<String> order;
     private final List<String> cacheOrder;
@@ -64,6 +65,7 @@ public class PixelsSplit
             @JsonProperty("start") int start,
             @JsonProperty("len") int len,
             @JsonProperty("cached") boolean cached,
+            @JsonProperty("ensureLocality") boolean ensureLocality,
             @JsonProperty("addresses") List<HostAddress> addresses,
             @JsonProperty("order") List<String> order,
             @JsonProperty("cacheOrder") List<String> cacheOrder,
@@ -82,6 +84,7 @@ public class PixelsSplit
         this.start = start;
         this.len = len;
         this.cached = cached;
+        this.ensureLocality = ensureLocality;
         this.addresses = ImmutableList.copyOf(requireNonNull(addresses, "addresses is null"));
         this.order = requireNonNull(order, "order is null");
         this.cacheOrder = requireNonNull(cacheOrder, "cache order is null");
@@ -146,7 +149,12 @@ public class PixelsSplit
     @Override
     public boolean isRemotelyAccessible()
     {
-        return false;
+        /**
+         * PIXELS-222:
+         * Some storage systems, such as S3, does not provide data
+         * locality. We should not force Presto to access local data.
+         */
+        return !ensureLocality;
     }
 
     public boolean nextPath()
