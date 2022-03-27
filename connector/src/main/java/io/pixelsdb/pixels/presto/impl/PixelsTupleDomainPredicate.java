@@ -83,7 +83,7 @@ public class PixelsTupleDomainPredicate<C>
          * PIXELS-103:
          * We firstly check if this predicate matches all column statistics.
          * Because according to the implementation of TupleDomain in Presto-0.192,
-         * even if matchesAll(), e.i TupleDomain.isAll() returns true, the domains
+         * even if matchesAll(), i.e., TupleDomain.isAll() returns true, the domains
          * in the predicate can be empty, and thus we have no way to call
          * domainMatches and turn true.
          */
