@@ -46,41 +46,36 @@ public class PixelsPrestoConfig
         return BatchSize;
     }
 
-    private String pixelsHome = null;
+    private String pixelsConfig = null;
 
-    @Config("pixels.home")
-    public PixelsPrestoConfig setPixelsHome (String pixelsHome)
+    @Config("pixels.config")
+    public PixelsPrestoConfig setPixelsConfig (String pixelsConfig)
     {
-        this.pixelsHome = pixelsHome;
+        this.pixelsConfig = pixelsConfig;
 
         // reload configuration
         if (this.configFactory == null)
         {
-            if (pixelsHome == null || pixelsHome.isEmpty())
+            if (pixelsConfig == null || pixelsConfig.isEmpty())
             {
-                String defaultPixelsHome = ConfigFactory.Instance().getProperty("pixels.home");
-                if (defaultPixelsHome == null)
+                String pixelsHome = ConfigFactory.Instance().getProperty("pixels.home");
+                if (pixelsHome == null)
                 {
-                    logger.info("using pixels.properties insided in jar.");
+                    logger.info("using pixels.properties in jar.");
                 } else
                 {
-                    logger.info("using pixels.properties under default pixels.home: " + defaultPixelsHome);
+                    logger.info("using pixels.properties under default pixels.home: " + pixelsHome);
                 }
             } else
             {
-                if (!(pixelsHome.endsWith("/") || pixelsHome.endsWith("\\")))
-                {
-                    pixelsHome += "/";
-                }
                 try
                 {
-                    ConfigFactory.Instance().loadProperties(pixelsHome + "pixels.properties");
-                    ConfigFactory.Instance().addProperty("pixels.home", pixelsHome);
-                    logger.info("using pixels.properties under connector specified pixels.home: " + pixelsHome);
+                    ConfigFactory.Instance().loadProperties(pixelsConfig);
+                    logger.info("using pixels.properties specified by the connector: " + pixelsConfig);
 
                 } catch (IOException e)
                 {
-                    logger.error(e,"can not load pixels.properties under: " + pixelsHome +
+                    logger.error(e,"can not load pixels.properties: " + pixelsConfig +
                             ", configuration reloading is skipped.");
                     throw new PrestoException(PixelsErrorCode.PIXELS_CONFIG_ERROR, e);
                 }
@@ -121,9 +116,9 @@ public class PixelsPrestoConfig
     }
 
     @NotNull
-    public String getPixelsHome ()
+    public String getPixelsConfig ()
     {
-        return this.pixelsHome;
+        return this.pixelsConfig;
     }
 
     /**

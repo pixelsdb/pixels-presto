@@ -28,10 +28,10 @@ In addition to the configurations mentioned in the official docs,
 create the catalog config file named `pixels.properties` for Pixels in the `etc/catalog` directory, with the following content:
 ```properties
 connector.name=pixels
-pixels.home=/home/ubuntu/opt/pixels/
+pixels.config=/home/ubuntu/opt/pixels/pixels.properties
 ```
-`pixels.home` should be the same as `PIXELS_HOME`.
-**Note** that this `pixels.properties` is in the `etc/catalog` directory of Presto's home, and is different from `PIXELS_HOME/pixels.properties`.
+`pixels.config` is used to specify the config file for Pixels, and has a higher priority than the config file under `PIXELS_HOME`.
+**Note** that `etc/catalog/pixels.proterties` under Presto's home is different from `PIXELS_HOME/pixels.properties`.
 
 ### Install Pixels Event Listener*
 Pixels event listener is optional. It is used to collect the query completion information for performance evaluations.
