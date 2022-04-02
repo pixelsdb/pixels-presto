@@ -39,7 +39,7 @@ public class testPixelsMetadataProxy
     @Before
     public void init ()
     {
-        PixelsPrestoConfig config = new PixelsPrestoConfig().setPixelsHome("");
+        PixelsPrestoConfig config = new PixelsPrestoConfig().setPixelsConfig("");
         this.pixelsMetadataProxy = new PixelsMetadataProxy(config, null);
     }
 
