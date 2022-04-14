@@ -20,20 +20,21 @@
 package io.pixelsdb.pixels.presto;
 
 import com.alibaba.fastjson.JSON;
-import io.etcd.jetcd.KeyValue;
 import com.facebook.presto.spi.*;
 import com.facebook.presto.spi.connector.ConnectorSplitManager;
 import com.facebook.presto.spi.connector.ConnectorTransactionHandle;
+import com.facebook.presto.spi.predicate.Marker;
 import com.facebook.presto.spi.predicate.TupleDomain;
 import com.google.common.collect.ImmutableList;
 import io.airlift.log.Logger;
+import io.airlift.slice.Slice;
+import io.etcd.jetcd.KeyValue;
 import io.pixelsdb.pixels.common.exception.MetadataException;
-import io.pixelsdb.pixels.common.layout.SplitPattern;
+import io.pixelsdb.pixels.common.layout.*;
 import io.pixelsdb.pixels.common.metadata.domain.*;
 import io.pixelsdb.pixels.common.physical.Location;
 import io.pixelsdb.pixels.common.physical.Storage;
 import io.pixelsdb.pixels.common.physical.StorageFactory;
-import io.pixelsdb.pixels.common.layout.*;
 import io.pixelsdb.pixels.common.utils.Constants;
 import io.pixelsdb.pixels.common.utils.EtcdUtil;
 import io.pixelsdb.pixels.presto.exception.CacheException;
@@ -95,6 +96,84 @@ public class PixelsSplitManager
 
         TupleDomain<PixelsColumnHandle> constraint = layoutHandle.getConstraint()
                 .transform(PixelsColumnHandle.class::cast);
+
+        List<TupleDomain.ColumnDomain<PixelsColumnHandle>> columnDomains = constraint.getColumnDomains().get();
+        for (TupleDomain.ColumnDomain<PixelsColumnHandle> columnDomain : columnDomains)
+        {
+            StringBuilder builder = new StringBuilder("{");
+            builder.append("column_name:").append(columnDomain.getColumn().getColumnName());
+            builder.append(", column type:").append(columnDomain.getColumn().getTypeCategory().getPrimaryName());
+            builder.append(", domain column type:").append(columnDomain.getDomain().getType().getDisplayName());
+            builder.append(", domain:").append(columnDomain.getDomain().getValues().toString(session));
+
+            String rangeValues = columnDomain.getDomain().getValues().getValuesProcessor().transform(
+                    ranges -> {
+                        StringBuilder rangesBuilder = new StringBuilder();
+                        if (ranges.getRangeCount() > 0)
+                        {
+                            ranges.getOrderedRanges().forEach(range ->
+                            {
+                                if (range.isSingleValue())
+                                {
+                                    rangesBuilder.append("[").append(range.getLow().getPrintableValue(session)).append("]");
+                                } else
+                                {
+                                    rangesBuilder.append(range.getLow().getBound() == Marker.Bound.EXACTLY ? "[" : "(");
+                                    if (range.getLow().isLowerUnbounded())
+                                    {
+                                        rangesBuilder.append("<min>");
+                                    } else
+                                    {
+                                        rangesBuilder.append(range.getLow().getPrintableValue(session));
+                                    }
+                                    rangesBuilder.append(", ");
+                                    if (range.getHigh().isUpperUnbounded())
+                                    {
+                                        rangesBuilder.append("<max>");
+                                    } else
+                                    {
+                                        rangesBuilder.append(range.getHigh().getPrintableValue(session));
+                                    }
+                                    rangesBuilder.append(range.getHigh().getBound() == Marker.Bound.EXACTLY ? "]" : ")");
+                                }
+                            });
+                        }
+                        return rangesBuilder.toString();
+                    },
+                    discreteValues -> {
+                        StringBuilder valuesBuilder = new StringBuilder();
+                        valuesBuilder.append(discreteValues.isWhiteList() ? "[" : "EXCLUDES[");
+                        discreteValues.getValues().forEach(value->
+                        {
+                            if (value == null)
+                            {
+                                valuesBuilder.append("null");
+                            }
+                            else
+                            {
+                                Class<?> javaType = columnDomain.getDomain().getType().getJavaType();
+                                if (javaType == Slice.class)
+                                {
+                                    Slice slice = (Slice) value;
+                                    valuesBuilder.append(slice.toString(StandardCharsets.UTF_8));
+                                }
+                                else
+                                {
+                                    valuesBuilder.append(value);
+                                }
+                            }
+                            valuesBuilder.append(",");
+                        });
+                        valuesBuilder.append("]");
+                        return valuesBuilder.toString();
+                    },
+                    allOrNone -> allOrNone.isAll() ? "ALL" : "NONE"
+            );
+            builder.append(", rangeValues:").append(rangeValues);
+            builder.append("}");
+            logger.info("columnDomain " + builder);
+        }
+
         Set<PixelsColumnHandle> desiredColumns = layoutHandle.getDesiredColumns().stream().map(PixelsColumnHandle.class::cast)
                 .collect(toSet());
 
