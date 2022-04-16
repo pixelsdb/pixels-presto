@@ -25,6 +25,7 @@ import com.facebook.presto.spi.connector.ConnectorSplitManager;
 import com.facebook.presto.spi.connector.ConnectorTransactionHandle;
 import com.facebook.presto.spi.predicate.Marker;
 import com.facebook.presto.spi.predicate.TupleDomain;
+import com.facebook.presto.spi.type.Type;
 import com.google.common.collect.ImmutableList;
 import io.airlift.log.Logger;
 import io.airlift.slice.Slice;
@@ -37,6 +38,7 @@ import io.pixelsdb.pixels.common.physical.Storage;
 import io.pixelsdb.pixels.common.physical.StorageFactory;
 import io.pixelsdb.pixels.common.utils.Constants;
 import io.pixelsdb.pixels.common.utils.EtcdUtil;
+import io.pixelsdb.pixels.core.TypeDescription.Category;
 import io.pixelsdb.pixels.core.predicate.Bound;
 import io.pixelsdb.pixels.core.predicate.ColumnFilter;
 import io.pixelsdb.pixels.core.predicate.Filter;
@@ -121,14 +123,14 @@ public class PixelsSplitManager
             List<TupleDomain.ColumnDomain<PixelsColumnHandle>> columnDomains = constraint.getColumnDomains().get();
             for (TupleDomain.ColumnDomain<PixelsColumnHandle> columnDomain : columnDomains)
             {
-                ColumnFilter<?> columnFilter = getColumnFilter(columnDomain, colToCid, session);
+                ColumnFilter<?> columnFilter = createColumnFilter(columnDomain);
                 columnFilters.put(colToCid.get(columnDomain.getColumn().getColumnName()), columnFilter);
             }
         }
 
         logger.info(includeCols.size() + " column included.");
         logger.info(JSON.toJSONString(tableScanFilter));
-        // pass includeCols and tableScanFilter into PixelsSplits.
+        // TODO: pass includeCols and tableScanFilter into PixelsSplits.
 
         Table table;
         Storage storage;
@@ -449,87 +451,96 @@ public class PixelsSplitManager
         return new FixedSplitSource(pixelsSplits);
     }
 
-    private ColumnFilter<?> getColumnFilter(TupleDomain.ColumnDomain<PixelsColumnHandle> columnDomain,
-                                            Map<String, Integer> colToCid, ConnectorSession session)
+    private <T extends Comparable<T>> ColumnFilter<T> createColumnFilter(
+            TupleDomain.ColumnDomain<PixelsColumnHandle> columnDomain)
     {
-        StringBuilder builder = new StringBuilder("{");
-        builder.append("column_name:").append(columnDomain.getColumn().getColumnName());
-        builder.append(", column type:").append(columnDomain.getColumn().getTypeCategory().getPrimaryName());
-        builder.append(", domain column type:").append(columnDomain.getDomain().getType().getDisplayName());
-        builder.append(", domain:").append(columnDomain.getDomain().getValues().toString(session));
+        Type prestoType = columnDomain.getDomain().getType();
+        String columnName = columnDomain.getColumn().getColumnName();
+        Category columnType = columnDomain.getColumn().getTypeCategory();
+        boolean isAll = columnDomain.getDomain().isAll();
+        boolean isNone = columnDomain.getDomain().isNone();
+        boolean allowNull = columnDomain.getDomain().isNullAllowed();
+        boolean onlyNull = columnDomain.getDomain().isOnlyNull();
 
-        int cid = colToCid.get(columnDomain.getColumn().getColumnName());
-        Filter<?> filter = new Filter(columnDomain.getColumn().getTypeCategory().getInternalJavaType(),
-                columnDomain.getDomain().isAll(), columnDomain.getDomain().isNone(),
-                columnDomain.getDomain().isNullAllowed());
-
-        String rangeValues = columnDomain.getDomain().getValues().getValuesProcessor().transform(
+        Filter<T> filter = columnDomain.getDomain().getValues().getValuesProcessor().transform(
                 ranges -> {
-                    StringBuilder rangesBuilder = new StringBuilder();
+                    Filter<T> res = new Filter<>(columnType.getInternalJavaType(), isAll, isNone, allowNull, onlyNull);
                     if (ranges.getRangeCount() > 0)
                     {
                         ranges.getOrderedRanges().forEach(range ->
                         {
                             if (range.isSingleValue())
                             {
-                                Bound bound = new Bound(Bound.Type.INCLUDED, (Comparable) range.getLow().getValue());
-                                filter.addDiscreteValue(bound);
-                                rangesBuilder.append("[").append(range.getLow().getPrintableValue(session)).append("]");
+                                Bound<?> bound = createBound(prestoType, Bound.Type.INCLUDED, range.getLow().getValue());
+                                res.addDiscreteValue((Bound<T>) bound);
                             } else
                             {
-                                rangesBuilder.append(range.getLow().getBound() == Marker.Bound.EXACTLY ? "[" : "(");
+                                Bound.Type lowerBoundType = range.getLow().getBound() == Marker.Bound.EXACTLY ?
+                                        Bound.Type.INCLUDED : Bound.Type.EXCLUDED;
+                                Bound.Type upperBoundType = range.getHigh().getBound() == Marker.Bound.EXACTLY ?
+                                        Bound.Type.INCLUDED : Bound.Type.EXCLUDED;
+                                Object lowerBoundValue = null, upperBoundValue = null;
                                 if (range.getLow().isLowerUnbounded())
                                 {
-                                    rangesBuilder.append("<min>");
+                                    lowerBoundType = Bound.Type.UNBOUNDED;
                                 } else
                                 {
-                                    rangesBuilder.append(range.getLow().getPrintableValue(session));
+                                    lowerBoundValue = range.getLow().getValue();
                                 }
-                                rangesBuilder.append(", ");
                                 if (range.getHigh().isUpperUnbounded())
                                 {
-                                    rangesBuilder.append("<max>");
+                                    upperBoundType = Bound.Type.UNBOUNDED;
                                 } else
                                 {
-                                    rangesBuilder.append(range.getHigh().getPrintableValue(session));
+                                    upperBoundValue = range.getHigh().getValue();
                                 }
-                                rangesBuilder.append(range.getHigh().getBound() == Marker.Bound.EXACTLY ? "]" : ")");
+                                Bound<?> lowerBound = createBound(prestoType, lowerBoundType, lowerBoundValue);
+                                Bound<?> upperBound = createBound(prestoType, upperBoundType, upperBoundValue);
+                                res.addRange((Bound<T>) lowerBound, (Bound<T>) upperBound);
                             }
                         });
                     }
-                    return rangesBuilder.toString();
+                    return res;
                 },
                 discreteValues -> {
-                    StringBuilder valuesBuilder = new StringBuilder();
-                    valuesBuilder.append(discreteValues.isWhiteList() ? "[" : "EXCLUDES[");
+                    Filter<T> res = new Filter<>(columnType.getInternalJavaType(), isAll, isNone, allowNull, onlyNull);
+                    Bound.Type boundType = discreteValues.isWhiteList() ? Bound.Type.INCLUDED : Bound.Type.EXCLUDED;
                     discreteValues.getValues().forEach(value ->
                     {
                         if (value == null)
                         {
-                            valuesBuilder.append("null");
+                            throw new PrestoException(PixelsErrorCode.PIXELS_INVALID_METADATA,
+                                    "discrete value is null");
                         } else
                         {
-                            Class<?> javaType = columnDomain.getDomain().getType().getJavaType();
-                            if (javaType == Slice.class)
-                            {
-                                Slice slice = (Slice) value;
-                                valuesBuilder.append(slice.toString(StandardCharsets.UTF_8));
-                            } else
-                            {
-                                valuesBuilder.append(value);
-                            }
+                            Bound<?> bound = createBound(prestoType, boundType, value);
+                            res.addDiscreteValue((Bound<T>) bound);
                         }
-                        valuesBuilder.append(",");
                     });
-                    valuesBuilder.append("]");
-                    return valuesBuilder.toString();
+                    return res;
                 },
-                allOrNone -> allOrNone.isAll() ? "ALL" : "NONE"
+                allOrNone -> new Filter<>(columnType.getInternalJavaType(), isAll, isNone, allowNull, onlyNull)
         );
-        builder.append(", rangeValues:").append(rangeValues);
-        builder.append("}");
-        logger.info("columnDomain " + builder);
-        return null;
+        return new ColumnFilter<>(columnName, columnType, filter);
+    }
+
+    private Bound<?> createBound(Type prestoType, Bound.Type boundType, Object value)
+    {
+        Class<?> javaType = prestoType.getJavaType();
+        Bound<?> bound = null;
+        if (javaType == long.class) {
+            bound = new Bound<>(boundType, (Long) value);
+        }
+        if (javaType == double.class) {
+            bound = new Bound<>(boundType, (Double) value);
+        }
+        if (javaType == boolean.class) {
+            bound = new Bound<>(boundType, (byte)((Boolean) value ? 1 : 0));
+        }
+        if (javaType == Slice.class) {
+            bound = new Bound<>(boundType, ((Slice) value).toString(StandardCharsets.UTF_8).trim());
+        }
+        return bound;
     }
 
     private List<HostAddress> toHostAddresses(List<Location> locations)
