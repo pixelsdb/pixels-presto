@@ -457,6 +457,8 @@ public class PixelsSplitManager
         Type prestoType = columnDomain.getDomain().getType();
         String columnName = columnDomain.getColumn().getColumnName();
         Category columnType = columnDomain.getColumn().getTypeCategory();
+        Class<?> filterJavaType = columnType.getInternalJavaType() == byte[].class ?
+                String.class : columnType.getInternalJavaType();
         boolean isAll = columnDomain.getDomain().isAll();
         boolean isNone = columnDomain.getDomain().isNone();
         boolean allowNull = columnDomain.getDomain().isNullAllowed();
@@ -464,21 +466,22 @@ public class PixelsSplitManager
 
         Filter<T> filter = columnDomain.getDomain().getValues().getValuesProcessor().transform(
                 ranges -> {
-                    Filter<T> res = new Filter<>(columnType.getInternalJavaType(), isAll, isNone, allowNull, onlyNull);
+                    Filter<T> res = new Filter<>(filterJavaType, isAll, isNone, allowNull, onlyNull);
                     if (ranges.getRangeCount() > 0)
                     {
                         ranges.getOrderedRanges().forEach(range ->
                         {
                             if (range.isSingleValue())
                             {
-                                Bound<?> bound = createBound(prestoType, Bound.Type.INCLUDED, range.getLow().getValue());
+                                Bound<?> bound = createBound(prestoType, Bound.Type.INCLUDED,
+                                        range.getLow().getValue());
                                 res.addDiscreteValue((Bound<T>) bound);
                             } else
                             {
-                                Bound.Type lowerBoundType = range.getLow().getBound() == Marker.Bound.EXACTLY ?
-                                        Bound.Type.INCLUDED : Bound.Type.EXCLUDED;
-                                Bound.Type upperBoundType = range.getHigh().getBound() == Marker.Bound.EXACTLY ?
-                                        Bound.Type.INCLUDED : Bound.Type.EXCLUDED;
+                                Bound.Type lowerBoundType = range.getLow().getBound() ==
+                                        Marker.Bound.EXACTLY ? Bound.Type.INCLUDED : Bound.Type.EXCLUDED;
+                                Bound.Type upperBoundType = range.getHigh().getBound() ==
+                                        Marker.Bound.EXACTLY ? Bound.Type.INCLUDED : Bound.Type.EXCLUDED;
                                 Object lowerBoundValue = null, upperBoundValue = null;
                                 if (range.getLow().isLowerUnbounded())
                                 {
@@ -503,8 +506,9 @@ public class PixelsSplitManager
                     return res;
                 },
                 discreteValues -> {
-                    Filter<T> res = new Filter<>(columnType.getInternalJavaType(), isAll, isNone, allowNull, onlyNull);
-                    Bound.Type boundType = discreteValues.isWhiteList() ? Bound.Type.INCLUDED : Bound.Type.EXCLUDED;
+                    Filter<T> res = new Filter<>(filterJavaType, isAll, isNone, allowNull, onlyNull);
+                    Bound.Type boundType = discreteValues.isWhiteList() ?
+                            Bound.Type.INCLUDED : Bound.Type.EXCLUDED;
                     discreteValues.getValues().forEach(value ->
                     {
                         if (value == null)
@@ -519,7 +523,7 @@ public class PixelsSplitManager
                     });
                     return res;
                 },
-                allOrNone -> new Filter<>(columnType.getInternalJavaType(), isAll, isNone, allowNull, onlyNull)
+                allOrNone -> new Filter<>(filterJavaType, isAll, isNone, allowNull, onlyNull)
         );
         return new ColumnFilter<>(columnName, columnType, filter);
     }
