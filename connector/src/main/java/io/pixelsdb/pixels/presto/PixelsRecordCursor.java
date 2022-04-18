@@ -59,14 +59,14 @@ public class PixelsRecordCursor implements RecordCursor
 {
     private static final Logger logger = Logger.get(PixelsPageSource.class);
     private final int BatchSize;
-    private PixelsSplit split;
-    private List<PixelsColumnHandle> columns;
-    private Storage storage;
+    private final PixelsSplit split;
+    private final List<PixelsColumnHandle> columns;
+    private final Storage storage;
     private boolean closed;
     private PixelsReader pixelsReader;
     private PixelsRecordReader recordReader;
-    private PixelsCacheReader cacheReader;
-    private PixelsFooterCache footerCache;
+    private final PixelsCacheReader cacheReader;
+    private final PixelsFooterCache footerCache;
     private long completedBytes = 0L;
     private long readTimeNanos = 0L;
     private long memoryUsage = 0L;
