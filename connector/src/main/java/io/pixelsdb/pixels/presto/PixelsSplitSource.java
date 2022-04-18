@@ -72,7 +72,7 @@ public class PixelsSplitSource implements ConnectorSplitSource
     }
 
     /**
-     * Returns whether any more {@link PixelsSplit} may be produced.
+     * Returns whether anymore {@link PixelsSplit} may be produced.
      * <p>
      * This method should only be called when there has been no invocation of getNextBatch,
      * or result Future of previous getNextBatch is done.

@@ -23,6 +23,7 @@ import com.facebook.presto.spi.*;
 import com.facebook.presto.spi.connector.ConnectorPageSourceProvider;
 import com.facebook.presto.spi.connector.ConnectorTransactionHandle;
 import com.google.inject.Inject;
+import io.airlift.log.Logger;
 import io.pixelsdb.pixels.cache.MemoryMappedFile;
 import io.pixelsdb.pixels.common.physical.Storage;
 import io.pixelsdb.pixels.common.physical.StorageFactory;
@@ -43,6 +44,8 @@ import static java.util.stream.Collectors.toList;
 public class PixelsPageSourceProvider
         implements ConnectorPageSourceProvider
 {
+    private static final Logger logger = Logger.get(PixelsPageSourceProvider.class);
+
     private final String connectorId;
     private final MemoryMappedFile cacheFile;
     private final MemoryMappedFile indexFile;
@@ -72,23 +75,28 @@ public class PixelsPageSourceProvider
 
     @Override
     public ConnectorPageSource createPageSource(ConnectorTransactionHandle transactionHandle,
-                                                ConnectorSession session, ConnectorSplit split, List<ColumnHandle> columns) {
+                                                ConnectorSession session, ConnectorSplit split,
+                                                List<ColumnHandle> columns)
+    {
         List<PixelsColumnHandle> pixelsColumns = columns.stream()
-                .map(PixelsColumnHandle.class::cast)
-                .collect(toList());
+                .map(PixelsColumnHandle.class::cast).collect(toList());
         requireNonNull(split, "split is null");
         PixelsSplit pixelsSplit = (PixelsSplit) split;
-        checkArgument(pixelsSplit.getConnectorId().equals(connectorId), "connectorId is not for this connector");
-
-        Storage storage = null;
+        checkArgument(pixelsSplit.getConnectorId().equals(connectorId),
+                "connectorId is not for this connector");
         try
         {
-            storage = StorageFactory.Instance().getStorage(pixelsSplit.getStorageScheme());
+            Storage storage = StorageFactory.Instance().getStorage(pixelsSplit.getStorageScheme());
+            return new PixelsPageSource(pixelsSplit, pixelsColumns, storage,
+                    cacheFile, indexFile, pixelsFooterCache, connectorId);
         } catch (IOException e)
         {
             throw new PrestoException(PixelsErrorCode.PIXELS_STORAGE_ERROR, e);
         }
+    }
 
-        return new PixelsPageSource(pixelsSplit, pixelsColumns, storage, cacheFile, indexFile, pixelsFooterCache, connectorId);
+    public static class PageSourceQueue
+    {
+
     }
 }

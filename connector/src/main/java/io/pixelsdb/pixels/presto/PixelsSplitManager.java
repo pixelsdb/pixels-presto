@@ -107,11 +107,6 @@ public class PixelsSplitManager
         String tableName = tableHandle.getTableName();
         Set<PixelsColumnHandle> desiredColumns = layoutHandle.getDesiredColumns().stream().
                 map(PixelsColumnHandle.class::cast).collect(toSet());
-        List<String> includeCols = new ArrayList<>(desiredColumns.size());
-        for (PixelsColumnHandle columnHandle : desiredColumns)
-        {
-            includeCols.add(columnHandle.getColumnName());
-        }
 
         Table table;
         Storage storage;
@@ -162,9 +157,9 @@ public class PixelsSplitManager
             IndexName indexName = new IndexName(schemaName, tableName);
             Order order = JSON.parseObject(layout.getOrder(), Order.class);
             ColumnSet columnSet = new ColumnSet();
-            for (String columnName : includeCols)
+            for (PixelsColumnHandle columnHandle : desiredColumns)
             {
-                columnSet.addColumn(columnName);
+                columnSet.addColumn(columnHandle.getColumnName());
             }
 
             // get split size
@@ -296,8 +291,7 @@ public class PixelsSplitManager
                                             tableHandle.getSchemaName(), tableHandle.getTableName(),
                                             table.getStorageScheme(), paths, transHandle.getTransId(),
                                             0, 1, false, storage.hasLocality(), orderedAddresses,
-                                            includeCols, order.getColumnOrder(), new ArrayList<>(0),
-                                            constraint);
+                                            order.getColumnOrder(), new ArrayList<>(0), constraint);
                                     // log.debug("Split in orderPath: " + pixelsSplit.toString());
                                     pixelsSplits.add(pixelsSplit);
                                 }
@@ -334,8 +328,7 @@ public class PixelsSplitManager
                                                 table.getStorageScheme(), Arrays.asList(path),
                                                 transHandle.getTransId(), curFileRGIdx, splitSize,
                                                 true, ensureLocality, compactAddresses,
-                                                includeCols, order.getColumnOrder(), cacheColumnletOrders,
-                                                constraint);
+                                                order.getColumnOrder(), cacheColumnletOrders, constraint);
                                         pixelsSplits.add(pixelsSplit);
                                         // log.debug("Split in compactPath" + pixelsSplit.toString());
                                         curFileRGIdx += splitSize;
@@ -392,8 +385,7 @@ public class PixelsSplitManager
                                     tableHandle.getSchemaName(), tableHandle.getTableName(),
                                     table.getStorageScheme(), paths, transHandle.getTransId(),
                                     0, 1, false, storage.hasLocality(), orderedAddresses,
-                                    includeCols, order.getColumnOrder(), new ArrayList<>(0),
-                                    constraint);
+                                    order.getColumnOrder(), new ArrayList<>(0), constraint);
                             // logger.debug("Split in orderPath: " + pixelsSplit.toString());
                             pixelsSplits.add(pixelsSplit);
                         }
@@ -416,8 +408,7 @@ public class PixelsSplitManager
                                         table.getStorageScheme(), Arrays.asList(path),
                                         transHandle.getTransId(), curFileRGIdx, splitSize,
                                         false, storage.hasLocality(), compactAddresses,
-                                        includeCols, order.getColumnOrder(), new ArrayList<>(0),
-                                        constraint);
+                                        order.getColumnOrder(), new ArrayList<>(0), constraint);
                                 pixelsSplits.add(pixelsSplit);
                                 curFileRGIdx += splitSize;
                             }
@@ -438,15 +429,14 @@ public class PixelsSplitManager
 
     public static TableScanFilter createTableScanFilter(
             String schemaName, String tableName,
-            List<String> includeCols, TupleDomain<PixelsColumnHandle> constraint)
+            String[] includeCols, TupleDomain<PixelsColumnHandle> constraint)
     {
         SortedMap<Integer, ColumnFilter> columnFilters = new TreeMap<>();
         TableScanFilter tableScanFilter = new TableScanFilter(schemaName, tableName, columnFilters);
-        Map<String, Integer> colToCid = new HashMap<>(includeCols.size());
-        int cid = 0;
-        for (String columnName : includeCols)
+        Map<String, Integer> colToCid = new HashMap<>(includeCols.length);
+        for (int i = 0; i < includeCols.length; ++i)
         {
-            colToCid.put(columnName, cid++);
+            colToCid.put(includeCols[i], i);
         }
         if (constraint.getColumnDomains().isPresent())
         {

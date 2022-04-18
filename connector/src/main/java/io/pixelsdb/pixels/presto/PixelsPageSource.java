@@ -75,8 +75,7 @@ class PixelsPageSource implements ConnectorPageSource
 
     public PixelsPageSource(PixelsSplit split, List<PixelsColumnHandle> columnHandles, Storage storage,
                             MemoryMappedFile cacheFile, MemoryMappedFile indexFile,
-                            PixelsFooterCache pixelsFooterCache,
-                            String connectorId)
+                            PixelsFooterCache pixelsFooterCache, String connectorId)
     {
         this.split = split;
         this.storage = storage;

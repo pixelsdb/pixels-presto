@@ -50,12 +50,6 @@ public class PixelsSplit
     private final boolean cached;
     private final boolean ensureLocality;
     private final List<HostAddress> addresses;
-    /**
-     * Note that this includeCols and column projection in
-     * {@link PixelsPageSourceProvider}'s createPageSource()
-     * may be in different column order.
-     */
-    private final List<String> includeCols;
     private final List<String> order;
     private final List<String> cacheOrder;
     private final TupleDomain<PixelsColumnHandle> constraint;
@@ -73,7 +67,6 @@ public class PixelsSplit
             @JsonProperty("cached") boolean cached,
             @JsonProperty("ensureLocality") boolean ensureLocality,
             @JsonProperty("addresses") List<HostAddress> addresses,
-            @JsonProperty("includeCols") List<String> includeCols,
             @JsonProperty("order") List<String> order,
             @JsonProperty("cacheOrder") List<String> cacheOrder,
             @JsonProperty("constraint") TupleDomain<PixelsColumnHandle> constraint) {
@@ -93,7 +86,6 @@ public class PixelsSplit
         this.cached = cached;
         this.ensureLocality = ensureLocality;
         this.addresses = ImmutableList.copyOf(requireNonNull(addresses, "addresses is null"));
-        this.includeCols = requireNonNull(includeCols, "includeCols is null");
         this.order = requireNonNull(order, "order is null");
         this.cacheOrder = requireNonNull(cacheOrder, "cache order is null");
         this.constraint = requireNonNull(constraint, "constraint is null");
@@ -190,12 +182,6 @@ public class PixelsSplit
     }
 
     @JsonProperty
-    public List<String> getIncludeCols()
-    {
-        return includeCols;
-    }
-
-    @JsonProperty
     public List<String> getOrder()
     {
         return order;
@@ -227,7 +213,6 @@ public class PixelsSplit
                 Objects.equals(this.len, that.len) &&
                 Objects.equals(this.addresses, that.addresses) &&
                 // No need to consider this.order and this.cacheOrder.
-                Objects.equals(this.includeCols, that.includeCols) &&
                 Objects.equals(this.constraint, that.constraint);
     }
 
@@ -235,7 +220,7 @@ public class PixelsSplit
     public int hashCode() {
         // No need to consider this.order and this.cacheOrder.
         return Objects.hash(connectorId, schemaName, tableName, paths, start, len,
-                addresses, cached, includeCols, constraint);
+                addresses, cached, constraint);
     }
 
     @Override
@@ -250,7 +235,7 @@ public class PixelsSplit
             }
         }
         pathBuilder.append("]");
-        // No need to print includeCols, order, cacheOrder, and constrain, in most cases.
+        // No need to print order, cacheOrder, and constrain, in most cases.
         return "PixelsSplit{" +
                 "connectorId=" + connectorId +
                 ", schemaName='" + schemaName + '\'' +
