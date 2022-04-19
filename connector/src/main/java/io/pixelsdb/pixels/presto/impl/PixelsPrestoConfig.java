@@ -25,9 +25,12 @@ import io.airlift.log.Logger;
 import io.pixelsdb.pixels.common.physical.StorageFactory;
 import io.pixelsdb.pixels.common.utils.ConfigFactory;
 import io.pixelsdb.pixels.presto.exception.PixelsErrorCode;
+import software.amazon.awssdk.regions.internal.util.EC2MetadataUtils;
 
 import javax.validation.constraints.NotNull;
 import java.io.IOException;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 
 /**
  * @Description: Configuration read from etc/catalog/pixels.properties
@@ -47,6 +50,13 @@ public class PixelsPrestoConfig
     }
 
     private String pixelsConfig = null;
+    private boolean lambdaEnabled = false;
+    private String minioOutputFolder = null;
+    private String minioEndpointIP = null;
+    private int minioEndpointPort = -1;
+    private String minioEndpoint = null;
+    private String minioAccessKey = null;
+    private String minioSecretKey = null;
 
     @Config("pixels.config")
     public PixelsPrestoConfig setPixelsConfig (String pixelsConfig)
@@ -119,6 +129,100 @@ public class PixelsPrestoConfig
     public String getPixelsConfig ()
     {
         return this.pixelsConfig;
+    }
+
+    @Config("lambda.enabled")
+    public PixelsPrestoConfig setLambdaEnabled(boolean enabled)
+    {
+        this.lambdaEnabled = enabled;
+        if (enabled)
+        {
+            this.minioEndpointIP = EC2MetadataUtils.getInstanceInfo().getPrivateIp();
+        }
+        else
+        {
+            try
+            {
+                this.minioEndpointIP = InetAddress.getLocalHost().getHostAddress();
+            } catch (UnknownHostException e)
+            {
+                logger.error(e, "failed to get local ip address when lambda is disabled");
+                this.minioEndpointIP = "127.0.0.1";
+            }
+        }
+        return this;
+    }
+
+    @Config("minio.output.folder")
+    public PixelsPrestoConfig setMinioOutputFolder(String folder)
+    {
+        this.minioOutputFolder = folder;
+        return this;
+    }
+
+    @Config("minio.endpoint.port")
+    public PixelsPrestoConfig setMinioEndpointPort(int port)
+    {
+        this.minioEndpointPort = port;
+        return this;
+    }
+
+    @Config("minio.access.key")
+    public PixelsPrestoConfig setMinioAccessKey(String accessKey)
+    {
+        this.minioAccessKey = accessKey;
+        return this;
+    }
+
+    @Config("minio.secret.key")
+    public PixelsPrestoConfig setMinioSecretKey(String secretKey)
+    {
+        this.minioSecretKey = secretKey;
+        return this;
+    }
+
+    public boolean isLambdaEnabled()
+    {
+        return lambdaEnabled;
+    }
+
+    @NotNull
+    public String getMinioOutputFolder()
+    {
+        return minioOutputFolder;
+    }
+
+    @NotNull
+    public String getMinioEndpointIP()
+    {
+        return minioEndpointIP;
+    }
+
+    public int getMinioEndpointPort()
+    {
+        return minioEndpointPort;
+    }
+
+    @NotNull
+    public String getMinioAccessKey()
+    {
+        return minioAccessKey;
+    }
+
+    @NotNull
+    public String getMinioSecretKey()
+    {
+        return minioSecretKey;
+    }
+
+    @NotNull
+    public String getMinioEndpoint()
+    {
+        if (this.minioEndpoint == null)
+        {
+            this.minioEndpoint = this.minioEndpointIP + ":" + minioEndpointPort;
+        }
+        return minioEndpoint;
     }
 
     /**

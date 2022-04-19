@@ -33,6 +33,7 @@ import io.pixelsdb.pixels.core.PixelsFooterCache;
 import io.pixelsdb.pixels.core.PixelsReader;
 import io.pixelsdb.pixels.core.PixelsReaderImpl;
 import io.pixelsdb.pixels.core.TypeDescription;
+import io.pixelsdb.pixels.core.lambda.ScanOutput;
 import io.pixelsdb.pixels.core.predicate.PixelsPredicate;
 import io.pixelsdb.pixels.core.reader.PixelsReaderOption;
 import io.pixelsdb.pixels.core.reader.PixelsRecordReader;
@@ -45,8 +46,10 @@ import io.pixelsdb.pixels.presto.impl.PixelsTupleDomainPredicate;
 
 import java.io.IOException;
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
 
 import static com.google.common.base.Preconditions.checkState;
+import static io.pixelsdb.pixels.common.physical.Storage.Scheme.minio;
 import static java.util.Objects.requireNonNull;
 
 /**
@@ -60,12 +63,15 @@ class PixelsPageSource implements ConnectorPageSource
     private final int BatchSize;
     private final PixelsSplit split;
     private final List<PixelsColumnHandle> columns;
+    private final String[] includeCols;
     private final Storage storage;
     private boolean closed;
     private PixelsReader pixelsReader;
     private PixelsRecordReader recordReader;
-    private PixelsCacheReader cacheReader;
-    private PixelsFooterCache footerCache;
+    private final PixelsCacheReader cacheReader;
+    private final PixelsFooterCache footerCache;
+    private final CompletableFuture<ScanOutput> lambdaOutput;
+    private final CompletableFuture<?> blocked;
     private long completedBytes = 0L;
     private long readTimeNanos = 0L;
     private long memoryUsage = 0L;
@@ -73,48 +79,48 @@ class PixelsPageSource implements ConnectorPageSource
     private final int numColumnToRead;
     private int batchId;
 
-    public PixelsPageSource(PixelsSplit split, List<PixelsColumnHandle> columnHandles, Storage storage,
-                            MemoryMappedFile cacheFile, MemoryMappedFile indexFile,
-                            PixelsFooterCache pixelsFooterCache, String connectorId)
+    public PixelsPageSource(PixelsSplit split, List<PixelsColumnHandle> columnHandles, String[] includeCols,
+                            Storage storage, MemoryMappedFile cacheFile, MemoryMappedFile indexFile,
+                            PixelsFooterCache pixelsFooterCache, CompletableFuture<ScanOutput> lambdaOutput)
     {
         this.split = split;
         this.storage = storage;
         this.columns = columnHandles;
+        this.includeCols = includeCols;
         this.numColumnToRead = columnHandles.size();
         this.footerCache = pixelsFooterCache;
+        this.lambdaOutput = lambdaOutput;
         this.batchId = 0;
         this.closed = false;
+        this.BatchSize = PixelsPrestoConfig.getBatchSize();
 
         this.cacheReader = PixelsCacheReader
                 .newBuilder()
                 .setCacheFile(cacheFile)
                 .setIndexFile(indexFile)
                 .build();
-        getPixelsReaderBySchema(split, cacheReader, pixelsFooterCache);
 
-        try
+        if (this.lambdaOutput == null)
         {
-            this.recordReader = this.pixelsReader.read(this.option);
+            readFirstPath(split, cacheReader, pixelsFooterCache);
+            this.blocked = NOT_BLOCKED;
         }
-        catch (IOException e)
+        else
         {
-            logger.error("create record reader error: " + e.getMessage());
-            closeWithSuppression(e);
-            throw new PrestoException(PixelsErrorCode.PIXELS_READER_ERROR,
-                    "create record reader error.", e);
+            this.blocked = this.lambdaOutput.whenComplete(((scanOutput, err) -> {
+                List<Integer> rgStarts = Collections.nCopies(scanOutput.getOutputs().size(), 0);
+                PixelsSplit newSplit = new PixelsSplit(split.getConnectorId(), split.getSchemaName(),
+                        split.getTableName(), minio.name(), scanOutput.getOutputs(), split.getQueryId(),
+                        rgStarts, scanOutput.getRowGroupNums(), false, true,
+                        split.getAddresses(), split.getOrder(), null, split.getConstraint());
+                readFirstPath(newSplit, cacheReader, pixelsFooterCache);
+            }));
         }
-        this.BatchSize = PixelsPrestoConfig.getBatchSize();
     }
 
-    private void getPixelsReaderBySchema(PixelsSplit split, PixelsCacheReader pixelsCacheReader,
-                                         PixelsFooterCache pixelsFooterCache)
+    private void readFirstPath(PixelsSplit split, PixelsCacheReader pixelsCacheReader,
+                               PixelsFooterCache pixelsFooterCache)
     {
-        String[] cols = new String[columns.size()];
-        for (int i = 0; i < columns.size(); i++)
-        {
-            cols[i] = columns.get(i).getColumnName();
-        }
-
         Map<PixelsColumnHandle, Domain> domains = new HashMap<>();
         if (split.getConstraint().getDomains().isPresent())
         {
@@ -138,9 +144,9 @@ class PixelsPageSource implements ConnectorPageSource
         this.option = new PixelsReaderOption();
         this.option.skipCorruptRecords(true);
         this.option.tolerantSchemaEvolution(true);
-        this.option.includeCols(cols);
+        this.option.includeCols(includeCols);
         this.option.predicate(predicate);
-        this.option.rgRange(split.getStart(), split.getLen());
+        this.option.rgRange(split.getRgStart(), split.getRgLength());
         this.option.queryId(split.getQueryId());
 
         try
@@ -156,6 +162,7 @@ class PixelsPageSource implements ConnectorPageSource
                         .setPixelsCacheReader(pixelsCacheReader)
                         .setPixelsFooterCache(pixelsFooterCache)
                         .build();
+                this.recordReader = this.pixelsReader.read(this.option);
             } else
             {
                 logger.error("pixelsReader error: storage handler is null");
@@ -188,6 +195,7 @@ class PixelsPageSource implements ConnectorPageSource
                             .setPixelsCacheReader(this.cacheReader)
                             .setPixelsFooterCache(this.footerCache)
                             .build();
+                    this.option.rgRange(split.getRgStart(), split.getRgLength());
                     this.recordReader = this.pixelsReader.read(this.option);
                 } else
                 {
@@ -249,6 +257,12 @@ class PixelsPageSource implements ConnectorPageSource
     public boolean isFinished()
     {
         return this.closed;
+    }
+
+    @Override
+    public CompletableFuture<?> isBlocked()
+    {
+        return this.blocked;
     }
 
     @Override

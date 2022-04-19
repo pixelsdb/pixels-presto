@@ -21,7 +21,6 @@ package io.pixelsdb.pixels.presto;
 
 import com.facebook.presto.spi.ConnectorSplit;
 import com.facebook.presto.spi.HostAddress;
-import com.facebook.presto.spi.SchemaTableName;
 import com.facebook.presto.spi.predicate.TupleDomain;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -30,6 +29,7 @@ import com.google.common.collect.ImmutableList;
 import java.util.List;
 import java.util.Objects;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
 /**
@@ -44,8 +44,8 @@ public class PixelsSplit
     private final String storageScheme;
     private final List<String> paths;
     private final long queryId;
-    private final int start;
-    private final int len;
+    private final List<Integer> rgStarts;
+    private final List<Integer> rgLengths;
     private int pathIndex;
     private final boolean cached;
     private final boolean ensureLocality;
@@ -62,8 +62,8 @@ public class PixelsSplit
             @JsonProperty("storageScheme") String storageScheme,
             @JsonProperty("paths") List<String> paths,
             @JsonProperty("queryId") long queryId,
-            @JsonProperty("start") int start,
-            @JsonProperty("len") int len,
+            @JsonProperty("rgStarts") List<Integer> rgStarts,
+            @JsonProperty("rgLengths") List<Integer> rgLengths,
             @JsonProperty("cached") boolean cached,
             @JsonProperty("ensureLocality") boolean ensureLocality,
             @JsonProperty("addresses") List<HostAddress> addresses,
@@ -75,14 +75,13 @@ public class PixelsSplit
         this.tableName = requireNonNull(tableName, "table name is null");
         this.storageScheme = requireNonNull(storageScheme, "storage scheme is null");
         this.paths = requireNonNull(paths, "paths is null");
-        if (paths.isEmpty())
-        {
-            throw new NullPointerException("paths is empty");
-        }
+        checkArgument(!paths.isEmpty(), "paths is empty");
         this.pathIndex = 0;
         this.queryId = queryId;
-        this.start = start;
-        this.len = len;
+        this.rgStarts = requireNonNull(rgStarts, "rgStarts is null");
+        checkArgument(rgStarts.size() == paths.size(), "the size of rgStarts and paths are different");
+        this.rgLengths = requireNonNull(rgLengths, "rgLengths is null");
+        checkArgument(rgLengths.size() == paths.size(), "the size of rgLengths and paths are different");
         this.cached = cached;
         this.ensureLocality = ensureLocality;
         this.addresses = ImmutableList.copyOf(requireNonNull(addresses, "addresses is null"));
@@ -99,10 +98,6 @@ public class PixelsSplit
     @JsonProperty
     public String getSchemaName() {
         return schemaName;
-    }
-
-    public SchemaTableName toSchemaTableName() {
-        return new SchemaTableName(schemaName, tableName);
     }
 
     @JsonProperty
@@ -131,13 +126,15 @@ public class PixelsSplit
     }
 
     @JsonProperty
-    public int getStart() {
-        return start;
+    public List<Integer> getRgStarts()
+    {
+        return rgStarts;
     }
 
     @JsonProperty
-    public int getLen() {
-        return len;
+    public List<Integer> getRgLengths()
+    {
+        return rgLengths;
     }
 
     @JsonProperty
@@ -175,6 +172,14 @@ public class PixelsSplit
         return this.paths.get(this.pathIndex);
     }
 
+    public int getRgStart() {
+        return this.rgStarts.get(pathIndex);
+    }
+
+    public int getRgLength() {
+        return this.rgLengths.get(pathIndex);
+    }
+
     @JsonProperty
     @Override
     public List<HostAddress> getAddresses() {
@@ -209,8 +214,8 @@ public class PixelsSplit
                 Objects.equals(this.schemaName, that.schemaName) &&
                 Objects.equals(this.tableName, that.tableName) &&
                 Objects.equals(this.paths, that.paths) &&
-                Objects.equals(this.start, that.start) &&
-                Objects.equals(this.len, that.len) &&
+                Objects.equals(this.rgStarts, that.rgStarts) &&
+                Objects.equals(this.rgLengths, that.rgLengths) &&
                 Objects.equals(this.addresses, that.addresses) &&
                 // No need to consider this.order and this.cacheOrder.
                 Objects.equals(this.constraint, that.constraint);
@@ -219,33 +224,38 @@ public class PixelsSplit
     @Override
     public int hashCode() {
         // No need to consider this.order and this.cacheOrder.
-        return Objects.hash(connectorId, schemaName, tableName, paths, start, len,
-                addresses, cached, constraint);
+        return Objects.hash(connectorId, schemaName, tableName, paths,
+                rgStarts, rgLengths, addresses, cached, constraint);
     }
 
     @Override
     public String toString() {
-        StringBuilder pathBuilder = new StringBuilder("[");
-        if (!paths.isEmpty())
-        {
-            pathBuilder.append(paths.get(0));
-            for (int i = 1; i < paths.size(); ++i)
-            {
-                pathBuilder.append(",").append(paths.get(i));
-            }
-        }
-        pathBuilder.append("]");
         // No need to print order, cacheOrder, and constrain, in most cases.
         return "PixelsSplit{" +
                 "connectorId=" + connectorId +
                 ", schemaName='" + schemaName + '\'' +
                 ", tableName='" + tableName + '\'' +
                 ", storageScheme='" + storageScheme + '\'' +
-                ", paths=" + pathBuilder +
-                ", start=" + start +
-                ", len=" + len +
+                ", paths=" + listToJsonArray(paths) +
+                ", rgStarts=" + listToJsonArray(rgStarts) +
+                ", rgLengths=" + listToJsonArray(rgLengths) +
                 ", isCached=" + cached +
                 ", addresses=" + addresses +
                 '}';
+    }
+
+    private <T> String listToJsonArray(List<T> list)
+    {
+        StringBuilder builder = new StringBuilder("[");
+        if (!list.isEmpty())
+        {
+            builder.append(list.get(0));
+            for (int i = 1; i < list.size(); ++i)
+            {
+                builder.append(",").append(list.get(i));
+            }
+        }
+        builder.append("]");
+        return builder.toString();
     }
 }
