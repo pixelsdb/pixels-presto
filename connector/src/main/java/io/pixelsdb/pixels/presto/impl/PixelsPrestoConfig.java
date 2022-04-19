@@ -220,7 +220,7 @@ public class PixelsPrestoConfig
     {
         if (this.minioEndpoint == null)
         {
-            this.minioEndpoint = this.minioEndpointIP + ":" + minioEndpointPort;
+            this.minioEndpoint = "http://" + this.minioEndpointIP + ":" + minioEndpointPort;
         }
         return minioEndpoint;
     }
