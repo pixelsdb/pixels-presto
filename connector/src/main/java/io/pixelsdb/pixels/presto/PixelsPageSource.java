@@ -61,7 +61,7 @@ class PixelsPageSource implements ConnectorPageSource
 {
     private static final Logger logger = Logger.get(PixelsPageSource.class);
     private final int BatchSize;
-    private final PixelsSplit split;
+    private PixelsSplit split;
     private final List<PixelsColumnHandle> columns;
     private final String[] includeCols;
     private final Storage storage;
@@ -108,12 +108,32 @@ class PixelsPageSource implements ConnectorPageSource
         else
         {
             this.blocked = this.lambdaOutput.whenComplete(((scanOutput, err) -> {
-                List<Integer> rgStarts = Collections.nCopies(scanOutput.getOutputs().size(), 0);
-                PixelsSplit newSplit = new PixelsSplit(split.getConnectorId(), split.getSchemaName(),
-                        split.getTableName(), minio.name(), scanOutput.getOutputs(), split.getQueryId(),
-                        rgStarts, scanOutput.getRowGroupNums(), false, true,
-                        split.getAddresses(), split.getOrder(), null, split.getConstraint());
-                readFirstPath(newSplit, cacheReader, pixelsFooterCache);
+                if (err != null)
+                {
+                    logger.error(err, "error in lambda invoke.");
+                }
+                try
+                {
+                    if (scanOutput == null)
+                    {
+                        throw new RuntimeException("scanOutput is null");
+                    }
+                    if (scanOutput.getOutputs() == null)
+                    {
+                        throw new RuntimeException("scanOutput.outputs is null");
+                    }
+                    List<Integer> rgStarts = Collections.nCopies(scanOutput.getOutputs().size(), 0);
+                    PixelsSplit newSplit = new PixelsSplit(split.getConnectorId(), split.getSchemaName(),
+                            split.getTableName(), minio.name(), scanOutput.getOutputs(), split.getQueryId(),
+                            rgStarts, scanOutput.getRowGroupNums(), false, true,
+                            split.getAddresses(), split.getOrder(), split.getCacheOrder(), split.getConstraint());
+                    this.split = newSplit;
+                    readFirstPath(this.split, cacheReader, pixelsFooterCache);
+                }
+                catch (Exception e)
+                {
+                    logger.error(e, "error in minio read.");
+                }
             }));
         }
     }
@@ -222,7 +242,7 @@ class PixelsPageSource implements ConnectorPageSource
         {
             return this.completedBytes;
         }
-        return this.completedBytes + recordReader.getCompletedBytes();
+        return this.completedBytes + (recordReader != null ? recordReader.getCompletedBytes() : 0);
     }
 
     @Override
@@ -232,7 +252,7 @@ class PixelsPageSource implements ConnectorPageSource
         {
             return readTimeNanos;
         }
-        return this.readTimeNanos + recordReader.getReadTimeNanos();
+        return this.readTimeNanos + (recordReader != null ? recordReader.getReadTimeNanos() : 0);
     }
 
     @Override
@@ -250,7 +270,7 @@ class PixelsPageSource implements ConnectorPageSource
         {
             return memoryUsage;
         }
-        return this.memoryUsage + recordReader.getMemoryUsage();
+        return this.memoryUsage + (recordReader != null ? recordReader.getMemoryUsage() : 0);
     }
 
     @Override
@@ -268,6 +288,17 @@ class PixelsPageSource implements ConnectorPageSource
     @Override
     public Page getNextPage()
     {
+        if (!this.blocked.isDone())
+        {
+            return null;
+        }
+        if (this.blocked.isCancelled() || this.blocked.isCompletedExceptionally())
+        {
+            this.close();
+            throw new PrestoException(PixelsErrorCode.PIXELS_READER_ERROR,
+                    "lambda request is canceled: " + blocked.isCancelled() + blocked);
+        }
+
         this.batchId++;
         VectorizedRowBatch rowBatch;
         int rowBatchSize;

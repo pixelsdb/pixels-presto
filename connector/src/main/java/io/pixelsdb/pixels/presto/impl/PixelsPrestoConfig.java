@@ -22,7 +22,6 @@ package io.pixelsdb.pixels.presto.impl;
 import com.facebook.presto.spi.PrestoException;
 import io.airlift.configuration.Config;
 import io.airlift.log.Logger;
-import io.pixelsdb.pixels.common.physical.StorageFactory;
 import io.pixelsdb.pixels.common.utils.ConfigFactory;
 import io.pixelsdb.pixels.presto.exception.PixelsErrorCode;
 import software.amazon.awssdk.regions.internal.util.EC2MetadataUtils;
@@ -104,7 +103,7 @@ public class PixelsPrestoConfig
             {
                 throw new PrestoException(PixelsErrorCode.PIXELS_CONFIG_ERROR, e);
             }
-            try
+            //try
             {
                 /**
                  * PIXELS-108:
@@ -116,10 +115,10 @@ public class PixelsPrestoConfig
                  *
                  * I currently don't know the reason (08.27.2021).
                  */
-                StorageFactory.Instance().reload();
-            } catch (IOException e)
+                //StorageFactory.Instance().reload();
+            } //catch (IOException e)
             {
-                throw new PrestoException(PixelsErrorCode.PIXELS_STORAGE_ERROR, e);
+                //throw new PrestoException(PixelsErrorCode.PIXELS_STORAGE_ERROR, e);
             }
         }
         return this;
@@ -150,6 +149,7 @@ public class PixelsPrestoConfig
                 this.minioEndpointIP = "127.0.0.1";
             }
         }
+        logger.info("using minio endpoint ip address: " + this.minioEndpointIP);
         return this;
     }
 

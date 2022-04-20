@@ -24,9 +24,11 @@ import com.facebook.presto.spi.*;
 import com.facebook.presto.spi.connector.ConnectorPageSourceProvider;
 import com.facebook.presto.spi.connector.ConnectorTransactionHandle;
 import com.google.inject.Inject;
+import io.airlift.log.Logger;
 import io.pixelsdb.pixels.cache.MemoryMappedFile;
 import io.pixelsdb.pixels.common.physical.Storage;
 import io.pixelsdb.pixels.common.physical.StorageFactory;
+import io.pixelsdb.pixels.common.physical.storage.MinIO;
 import io.pixelsdb.pixels.core.PixelsFooterCache;
 import io.pixelsdb.pixels.core.lambda.ScanInput;
 import io.pixelsdb.pixels.core.lambda.ScanInvoker;
@@ -50,7 +52,7 @@ import static java.util.stream.Collectors.toList;
 public class PixelsPageSourceProvider
         implements ConnectorPageSourceProvider
 {
-    // private static final Logger logger = Logger.get(PixelsPageSourceProvider.class);
+    private static final Logger logger = Logger.get(PixelsPageSourceProvider.class);
 
     private final String connectorId;
     private final MemoryMappedFile cacheFile;
@@ -103,6 +105,7 @@ public class PixelsPageSourceProvider
         {
             if (config.isLambdaEnabled())
             {
+                MinIO.ConfigMinIO(config.getMinioEndpoint(), config.getMinioAccessKey(), config.getMinioSecretKey());
                 Storage storage = StorageFactory.Instance().getStorage(Storage.Scheme.minio);
                 return new PixelsPageSource(pixelsSplit, pixelsColumns, includeCols, storage,
                         cacheFile, indexFile, pixelsFooterCache, getLambdaOutput(pixelsSplit, includeCols));
@@ -146,6 +149,7 @@ public class PixelsPageSourceProvider
         ScanInput.OutputInfo outputInfo = new ScanInput.OutputInfo(folder,
                 endpoint, accessKey, secretKey, true);
         scanInput.setOutput(outputInfo);
+        logger.info("lambda input: " + JSON.toJSONString(scanInput));
         return ScanInvoker.invoke(scanInput);
     }
 }
