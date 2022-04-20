@@ -33,7 +33,6 @@ import io.pixelsdb.pixels.core.PixelsFooterCache;
 import io.pixelsdb.pixels.core.PixelsReader;
 import io.pixelsdb.pixels.core.PixelsReaderImpl;
 import io.pixelsdb.pixels.core.TypeDescription;
-import io.pixelsdb.pixels.core.lambda.ScanOutput;
 import io.pixelsdb.pixels.core.predicate.PixelsPredicate;
 import io.pixelsdb.pixels.core.reader.PixelsReaderOption;
 import io.pixelsdb.pixels.core.reader.PixelsRecordReader;
@@ -49,7 +48,6 @@ import java.util.*;
 import java.util.concurrent.CompletableFuture;
 
 import static com.google.common.base.Preconditions.checkState;
-import static io.pixelsdb.pixels.common.physical.Storage.Scheme.minio;
 import static java.util.Objects.requireNonNull;
 
 /**
@@ -70,7 +68,7 @@ class PixelsPageSource implements ConnectorPageSource
     private PixelsRecordReader recordReader;
     private final PixelsCacheReader cacheReader;
     private final PixelsFooterCache footerCache;
-    private final CompletableFuture<ScanOutput> lambdaOutput;
+    private final CompletableFuture<?> lambdaOutput;
     private final CompletableFuture<?> blocked;
     private long completedBytes = 0L;
     private long readTimeNanos = 0L;
@@ -81,7 +79,7 @@ class PixelsPageSource implements ConnectorPageSource
 
     public PixelsPageSource(PixelsSplit split, List<PixelsColumnHandle> columnHandles, String[] includeCols,
                             Storage storage, MemoryMappedFile cacheFile, MemoryMappedFile indexFile,
-                            PixelsFooterCache pixelsFooterCache, CompletableFuture<ScanOutput> lambdaOutput)
+                            PixelsFooterCache pixelsFooterCache, CompletableFuture<?> lambdaOutput)
     {
         this.split = split;
         this.storage = storage;
@@ -107,34 +105,28 @@ class PixelsPageSource implements ConnectorPageSource
         }
         else
         {
-            this.blocked = this.lambdaOutput.whenComplete(((scanOutput, err) -> {
+            this.blocked = this.lambdaOutput.whenComplete(((ret, err) -> {
                 if (err != null)
                 {
-                    logger.error(err, "error in lambda invoke.");
+                    logger.error(err);
+                    throw new RuntimeException(err);
                 }
                 try
                 {
-                    if (scanOutput == null)
-                    {
-                        throw new RuntimeException("scanOutput is null");
-                    }
-                    if (scanOutput.getOutputs() == null)
-                    {
-                        throw new RuntimeException("scanOutput.outputs is null");
-                    }
-                    List<Integer> rgStarts = Collections.nCopies(scanOutput.getOutputs().size(), 0);
-                    PixelsSplit newSplit = new PixelsSplit(split.getConnectorId(), split.getSchemaName(),
-                            split.getTableName(), minio.name(), scanOutput.getOutputs(), split.getQueryId(),
-                            rgStarts, scanOutput.getRowGroupNums(), false, true,
-                            split.getAddresses(), split.getOrder(), split.getCacheOrder(), split.getConstraint());
-                    this.split = newSplit;
                     readFirstPath(this.split, cacheReader, pixelsFooterCache);
                 }
                 catch (Exception e)
                 {
                     logger.error(e, "error in minio read.");
+                    throw new RuntimeException(e);
                 }
             }));
+            if (this.blocked.isDone() && !this.blocked.isCancelled() &&
+                    !this.blocked.isCompletedExceptionally() && this.recordReader == null)
+            {
+                // this.blocked is complete normally before reaching here.
+                readFirstPath(this.split, cacheReader, pixelsFooterCache);
+            }
         }
     }
 
@@ -296,7 +288,8 @@ class PixelsPageSource implements ConnectorPageSource
         {
             this.close();
             throw new PrestoException(PixelsErrorCode.PIXELS_READER_ERROR,
-                    "lambda request is canceled: " + blocked.isCancelled() + blocked);
+                    "lambda request is done exceptionally: " +
+                            this.blocked.isCompletedExceptionally());
         }
 
         this.batchId++;

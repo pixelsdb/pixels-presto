@@ -32,7 +32,6 @@ import io.pixelsdb.pixels.common.physical.storage.MinIO;
 import io.pixelsdb.pixels.core.PixelsFooterCache;
 import io.pixelsdb.pixels.core.lambda.ScanInput;
 import io.pixelsdb.pixels.core.lambda.ScanInvoker;
-import io.pixelsdb.pixels.core.lambda.ScanOutput;
 import io.pixelsdb.pixels.core.predicate.TableScanFilter;
 import io.pixelsdb.pixels.presto.exception.PixelsErrorCode;
 import io.pixelsdb.pixels.presto.impl.PixelsPrestoConfig;
@@ -122,7 +121,7 @@ public class PixelsPageSourceProvider
         }
     }
 
-    private CompletableFuture<ScanOutput> getLambdaOutput(PixelsSplit inputSplit, String[] includeCols)
+    private CompletableFuture<?> getLambdaOutput(PixelsSplit inputSplit, String[] includeCols)
     {
         ScanInput scanInput = new ScanInput();
         scanInput.setQueryId(inputSplit.getQueryId());
@@ -150,6 +149,19 @@ public class PixelsPageSourceProvider
                 endpoint, accessKey, secretKey, true);
         scanInput.setOutput(outputInfo);
         logger.info("lambda input: " + JSON.toJSONString(scanInput));
-        return ScanInvoker.invoke(scanInput);
+        return ScanInvoker.invoke(scanInput).whenComplete(((scanOutput, err) -> {
+            if (err != null)
+            {
+                throw new RuntimeException("error in lambda invoke.", err);
+            }
+            try
+            {
+                inputSplit.permute(Storage.Scheme.minio, scanOutput);
+            }
+            catch (Exception e)
+            {
+                throw new RuntimeException("error in minio read.", e);
+            }
+        }));
     }
 }

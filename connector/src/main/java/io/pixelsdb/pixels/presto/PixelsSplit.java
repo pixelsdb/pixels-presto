@@ -25,7 +25,10 @@ import com.facebook.presto.spi.predicate.TupleDomain;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableList;
+import io.pixelsdb.pixels.common.physical.Storage;
+import io.pixelsdb.pixels.core.lambda.ScanOutput;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 
@@ -41,13 +44,13 @@ public class PixelsSplit
     private final String connectorId;
     private final String schemaName;
     private final String tableName;
-    private final String storageScheme;
-    private final List<String> paths;
+    private String storageScheme;
+    private List<String> paths;
     private final long queryId;
-    private final List<Integer> rgStarts;
-    private final List<Integer> rgLengths;
+    private List<Integer> rgStarts;
+    private List<Integer> rgLengths;
     private int pathIndex;
-    private final boolean cached;
+    private boolean cached;
     private final boolean ensureLocality;
     private final List<HostAddress> addresses;
     private final List<String> order;
@@ -88,6 +91,24 @@ public class PixelsSplit
         this.order = requireNonNull(order, "order is null");
         this.cacheOrder = requireNonNull(cacheOrder, "cache order is null");
         this.constraint = requireNonNull(constraint, "constraint is null");
+    }
+
+    /**
+     * Permute the original file information with the information of the
+     * intermediate files produced by serverless.
+     * @param scheme the storage scheme of intermediate files
+     * @param scanOutput the output of serverless
+     */
+    public void permute(Storage.Scheme scheme, ScanOutput scanOutput)
+    {
+        requireNonNull(scheme, "scheme is null");
+        requireNonNull(scanOutput, "scanOutput is null");
+        requireNonNull(scanOutput.getOutputs(), "scanOutput.outputs is null");
+        this.storageScheme = scheme.name();
+        this.paths = scanOutput.getOutputs();
+        this.rgStarts = Collections.nCopies(scanOutput.getOutputs().size(), 0);
+        this.rgLengths = scanOutput.getRowGroupNums();
+        this.cached = false;
     }
 
     @JsonProperty
