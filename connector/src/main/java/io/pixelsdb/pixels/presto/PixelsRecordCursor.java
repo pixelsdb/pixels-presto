@@ -59,14 +59,14 @@ public class PixelsRecordCursor implements RecordCursor
 {
     private static final Logger logger = Logger.get(PixelsPageSource.class);
     private final int BatchSize;
-    private PixelsSplit split;
-    private List<PixelsColumnHandle> columns;
-    private Storage storage;
+    private final PixelsSplit split;
+    private final List<PixelsColumnHandle> columns;
+    private final Storage storage;
     private boolean closed;
     private PixelsReader pixelsReader;
     private PixelsRecordReader recordReader;
-    private PixelsCacheReader cacheReader;
-    private PixelsFooterCache footerCache;
+    private final PixelsCacheReader cacheReader;
+    private final PixelsFooterCache footerCache;
     private long completedBytes = 0L;
     private long readTimeNanos = 0L;
     private long memoryUsage = 0L;
@@ -94,33 +94,21 @@ public class PixelsRecordCursor implements RecordCursor
         this.numColumnToRead = columnHandles.size();
         this.footerCache = footerCache;
         this.closed = false;
+        this.BatchSize = PixelsPrestoConfig.getBatchSize();
+        this.rowIndex = -1;
+        this.rowBatch = null;
+        this.rowBatchSize = 0;
 
         this.cacheReader = PixelsCacheReader
                 .newBuilder()
                 .setCacheFile(cacheFile)
                 .setIndexFile(indexFile)
                 .build();
-        getPixelsReaderBySchema(split, cacheReader, footerCache);
-
-        try
-        {
-            this.recordReader = this.pixelsReader.read(this.option);
-        }
-        catch (IOException e)
-        {
-            logger.error("create record reader error: " + e.getMessage());
-            closeWithSuppression(e);
-            throw new PrestoException(PixelsErrorCode.PIXELS_READER_ERROR,
-                    "create record reader error.", e);
-        }
-        this.BatchSize = PixelsPrestoConfig.getBatchSize();
-        this.rowIndex = -1;
-        this.rowBatch = null;
-        this.rowBatchSize = 0;
+        readFirstPath(split, cacheReader, footerCache);
     }
 
-    private void getPixelsReaderBySchema(PixelsSplit split, PixelsCacheReader pixelsCacheReader,
-                                         PixelsFooterCache pixelsFooterCache)
+    private void readFirstPath(PixelsSplit split, PixelsCacheReader pixelsCacheReader,
+                               PixelsFooterCache pixelsFooterCache)
     {
         String[] cols = new String[columns.size()];
         for (int i = 0; i < columns.size(); i++)
@@ -153,7 +141,7 @@ public class PixelsRecordCursor implements RecordCursor
         this.option.tolerantSchemaEvolution(true);
         this.option.includeCols(cols);
         this.option.predicate(predicate);
-        this.option.rgRange(split.getStart(), split.getLen());
+        this.option.rgRange(split.getRgStart(), split.getRgLength());
         this.option.queryId(split.getQueryId());
 
         try
@@ -169,6 +157,7 @@ public class PixelsRecordCursor implements RecordCursor
                         .setPixelsCacheReader(pixelsCacheReader)
                         .setPixelsFooterCache(pixelsFooterCache)
                         .build();
+                this.recordReader = this.pixelsReader.read(this.option);
             } else
             {
                 logger.error("pixelsReader error: storage handler is null");
@@ -200,6 +189,7 @@ public class PixelsRecordCursor implements RecordCursor
                             .setPixelsCacheReader(this.cacheReader)
                             .setPixelsFooterCache(this.footerCache)
                             .build();
+                    this.option.rgRange(split.getRgStart(), split.getRgLength());
                     this.recordReader = this.pixelsReader.read(this.option);
                 } else
                 {

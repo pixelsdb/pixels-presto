@@ -23,7 +23,6 @@ import com.facebook.presto.spi.*;
 import com.facebook.presto.spi.connector.ConnectorMetadata;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import io.airlift.log.Logger;
 import io.pixelsdb.pixels.common.exception.MetadataException;
 import io.pixelsdb.pixels.common.metadata.domain.Column;
 import io.pixelsdb.pixels.common.metadata.domain.View;
@@ -46,7 +45,7 @@ import static java.util.stream.Collectors.toList;
 public class PixelsMetadata
         implements ConnectorMetadata
 {
-    private static final Logger logger = Logger.get(PixelsMetadata.class);
+    // private static final Logger logger = Logger.get(PixelsMetadata.class);
     private final String connectorId;
 
     private final PixelsMetadataProxy pixelsMetadataProxy;
