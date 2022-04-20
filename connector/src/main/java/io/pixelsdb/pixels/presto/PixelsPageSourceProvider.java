@@ -24,7 +24,6 @@ import com.facebook.presto.spi.*;
 import com.facebook.presto.spi.connector.ConnectorPageSourceProvider;
 import com.facebook.presto.spi.connector.ConnectorTransactionHandle;
 import com.google.inject.Inject;
-import io.airlift.log.Logger;
 import io.pixelsdb.pixels.cache.MemoryMappedFile;
 import io.pixelsdb.pixels.common.physical.Storage;
 import io.pixelsdb.pixels.common.physical.StorageFactory;
@@ -51,7 +50,7 @@ import static java.util.stream.Collectors.toList;
 public class PixelsPageSourceProvider
         implements ConnectorPageSourceProvider
 {
-    private static final Logger logger = Logger.get(PixelsPageSourceProvider.class);
+    // private static final Logger logger = Logger.get(PixelsPageSourceProvider.class);
 
     private final String connectorId;
     private final MemoryMappedFile cacheFile;
@@ -148,7 +147,7 @@ public class PixelsPageSourceProvider
         ScanInput.OutputInfo outputInfo = new ScanInput.OutputInfo(folder,
                 endpoint, accessKey, secretKey, true);
         scanInput.setOutput(outputInfo);
-        logger.info("lambda input: " + JSON.toJSONString(scanInput));
+
         return ScanInvoker.invoke(scanInput).whenComplete(((scanOutput, err) -> {
             if (err != null)
             {
@@ -156,7 +155,7 @@ public class PixelsPageSourceProvider
             }
             try
             {
-                inputSplit.permute(Storage.Scheme.minio, scanOutput);
+                inputSplit.permute(Storage.Scheme.minio, includeCols, scanOutput);
             }
             catch (Exception e)
             {

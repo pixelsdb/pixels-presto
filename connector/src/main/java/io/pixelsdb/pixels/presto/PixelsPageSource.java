@@ -100,7 +100,7 @@ class PixelsPageSource implements ConnectorPageSource
 
         if (this.lambdaOutput == null)
         {
-            readFirstPath(split, cacheReader, pixelsFooterCache);
+            readFirstPath();
             this.blocked = NOT_BLOCKED;
         }
         else
@@ -113,7 +113,7 @@ class PixelsPageSource implements ConnectorPageSource
                 }
                 try
                 {
-                    readFirstPath(this.split, cacheReader, pixelsFooterCache);
+                    readFirstPath();
                 }
                 catch (Exception e)
                 {
@@ -122,17 +122,22 @@ class PixelsPageSource implements ConnectorPageSource
                 }
             }));
             if (this.blocked.isDone() && !this.blocked.isCancelled() &&
-                    !this.blocked.isCompletedExceptionally() && this.recordReader == null)
+                    !this.blocked.isCompletedExceptionally() &&
+                    !this.closed && this.recordReader == null)
             {
                 // this.blocked is complete normally before reaching here.
-                readFirstPath(this.split, cacheReader, pixelsFooterCache);
+                readFirstPath();
             }
         }
     }
 
-    private void readFirstPath(PixelsSplit split, PixelsCacheReader pixelsCacheReader,
-                               PixelsFooterCache pixelsFooterCache)
+    private void readFirstPath()
     {
+        if (split.isEmpty())
+        {
+            this.close();
+            return;
+        }
         Map<PixelsColumnHandle, Domain> domains = new HashMap<>();
         if (split.getConstraint().getDomains().isPresent())
         {
@@ -171,8 +176,8 @@ class PixelsPageSource implements ConnectorPageSource
                         .setPath(split.getPath())
                         .setEnableCache(split.getCached())
                         .setCacheOrder(split.getCacheOrder())
-                        .setPixelsCacheReader(pixelsCacheReader)
-                        .setPixelsFooterCache(pixelsFooterCache)
+                        .setPixelsCacheReader(cacheReader)
+                        .setPixelsFooterCache(footerCache)
                         .build();
                 this.recordReader = this.pixelsReader.read(this.option);
             } else
@@ -290,6 +295,11 @@ class PixelsPageSource implements ConnectorPageSource
             throw new PrestoException(PixelsErrorCode.PIXELS_READER_ERROR,
                     "lambda request is done exceptionally: " +
                             this.blocked.isCompletedExceptionally());
+        }
+
+        if (this.closed)
+        {
+            return null;
         }
 
         this.batchId++;

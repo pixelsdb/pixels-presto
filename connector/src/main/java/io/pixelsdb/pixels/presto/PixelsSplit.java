@@ -28,6 +28,7 @@ import com.google.common.collect.ImmutableList;
 import io.pixelsdb.pixels.common.physical.Storage;
 import io.pixelsdb.pixels.core.lambda.ScanOutput;
 
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
@@ -53,7 +54,7 @@ public class PixelsSplit
     private boolean cached;
     private final boolean ensureLocality;
     private final List<HostAddress> addresses;
-    private final List<String> order;
+    private List<String> order;
     private final List<String> cacheOrder;
     private final TupleDomain<PixelsColumnHandle> constraint;
 
@@ -82,9 +83,11 @@ public class PixelsSplit
         this.pathIndex = 0;
         this.queryId = queryId;
         this.rgStarts = requireNonNull(rgStarts, "rgStarts is null");
-        checkArgument(rgStarts.size() == paths.size(), "the size of rgStarts and paths are different");
+        checkArgument(rgStarts.size() == paths.size(),
+                "the size of rgStarts and paths are different");
         this.rgLengths = requireNonNull(rgLengths, "rgLengths is null");
-        checkArgument(rgLengths.size() == paths.size(), "the size of rgLengths and paths are different");
+        checkArgument(rgLengths.size() == paths.size(),
+                "the size of rgLengths and paths are different");
         this.cached = cached;
         this.ensureLocality = ensureLocality;
         this.addresses = ImmutableList.copyOf(requireNonNull(addresses, "addresses is null"));
@@ -97,18 +100,22 @@ public class PixelsSplit
      * Permute the original file information with the information of the
      * intermediate files produced by serverless.
      * @param scheme the storage scheme of intermediate files
+     * @param includeCols the columns that will be included in the intermediate files
      * @param scanOutput the output of serverless
      */
-    public void permute(Storage.Scheme scheme, ScanOutput scanOutput)
+    public void permute(Storage.Scheme scheme, String[] includeCols, ScanOutput scanOutput)
     {
         requireNonNull(scheme, "scheme is null");
         requireNonNull(scanOutput, "scanOutput is null");
         requireNonNull(scanOutput.getOutputs(), "scanOutput.outputs is null");
+        requireNonNull(scanOutput.getRowGroupNums(), "scanOutput.rowGroupNums is null");
         this.storageScheme = scheme.name();
         this.paths = scanOutput.getOutputs();
         this.rgStarts = Collections.nCopies(scanOutput.getOutputs().size(), 0);
         this.rgLengths = scanOutput.getRowGroupNums();
+        this.order = Arrays.asList(includeCols);
         this.cached = false;
+        this.cacheOrder.clear();
     }
 
     @JsonProperty
@@ -186,6 +193,11 @@ public class PixelsSplit
         {
             return false;
         }
+    }
+
+    public boolean isEmpty()
+    {
+        return this.paths.isEmpty();
     }
 
     public String getPath()
