@@ -110,6 +110,7 @@ public class PixelsPageSourceProvider
             {
                 MinIO.ConfigMinIO(config.getMinioEndpoint(), config.getMinioAccessKey(), config.getMinioSecretKey());
                 Storage storage = StorageFactory.Instance().getStorage(Storage.Scheme.minio);
+                IntermediateFileCleaner.Instance().registerStorage(storage);
                 return new PixelsPageSource(pixelsSplit, pixelsColumns, includeCols, storage, cacheFile, indexFile,
                         pixelsFooterCache, getLambdaOutput(pixelsSplit, includeCols), null);
             }
@@ -146,7 +147,7 @@ public class PixelsPageSourceProvider
         TableScanFilter filter = PixelsSplitManager.createTableScanFilter(inputSplit.getSchemaName(),
                 inputSplit.getTableName(), includeCols, inputSplit.getConstraint());
         scanInput.setFilter(JSON.toJSONString(filter));
-        String folder = config.getMinioOutputFolder();
+        String folder = config.getMinioOutputFolderForQuery(inputSplit.getQueryId());
         String endpoint = config.getMinioEndpoint();
         String accessKey = config.getMinioAccessKey();
         String secretKey = config.getMinioSecretKey();

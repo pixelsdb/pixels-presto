@@ -164,6 +164,10 @@ public class PixelsPrestoConfig
     @Config("minio.output.folder")
     public PixelsPrestoConfig setMinioOutputFolder(String folder)
     {
+        if (!folder.endsWith("/"))
+        {
+            folder = folder + "/";
+        }
         this.minioOutputFolder = folder;
         return this;
     }
@@ -203,6 +207,15 @@ public class PixelsPrestoConfig
     public String getMinioOutputFolder()
     {
         return minioOutputFolder;
+    }
+
+    @NotNull
+    public String getMinioOutputFolderForQuery(long queryId)
+    {
+        /* Must end with '/', otherwise it will not be considered
+         * as a folder in S3-like storage.
+         */
+        return this.minioOutputFolder + queryId + "/";
     }
 
     @NotNull

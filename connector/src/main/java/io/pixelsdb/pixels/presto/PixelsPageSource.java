@@ -48,7 +48,6 @@ import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
 
@@ -384,30 +383,6 @@ class PixelsPageSource implements ConnectorPageSource
         if (this.localSplitCounter != null)
         {
             this.localSplitCounter.decrementAndGet();
-        }
-
-        if (this.lambdaOutput != null)
-        {
-            checkArgument(this.storage.getScheme() == Storage.Scheme.minio,
-                    "lambda is used, but storage scheme is " + this.storage.getScheme().name());
-            for (String path : this.split.getPaths())
-            {
-                try
-                {
-                    IntermediateFileCleaner.Instance().asyncDelete(path, this.storage);
-                } catch (InterruptedException e)
-                {
-                    try
-                    {
-                        logger.error(e, "failed to delete the intermediate file by the cleaner");
-                        this.storage.delete(path, false);
-                    } catch (IOException ex)
-                    {
-                        throw new PrestoException(PixelsErrorCode.PIXELS_STORAGE_ERROR,
-                                "failed to delete the intermediate file", ex);
-                    }
-                }
-            }
         }
 
         closed = true;
