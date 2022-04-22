@@ -452,7 +452,6 @@ public class PixelsSplitManager
             }
         }
 
-        // logger.info(JSON.toJSONString(tableScanFilter));
         return tableScanFilter;
     }
 
@@ -537,17 +536,29 @@ public class PixelsSplitManager
     {
         Class<?> javaType = prestoType.getJavaType();
         Bound<?> bound = null;
-        if (javaType == long.class) {
-            bound = new Bound<>(boundType, (Long) value);
+        if (boundType == Bound.Type.UNBOUNDED)
+        {
+            bound = new Bound<>(boundType, null);
         }
-        if (javaType == double.class) {
-            bound = new Bound<>(boundType, (Double) value);
-        }
-        if (javaType == boolean.class) {
-            bound = new Bound<>(boundType, (byte)((Boolean) value ? 1 : 0));
-        }
-        if (javaType == Slice.class) {
-            bound = new Bound<>(boundType, ((Slice) value).toString(StandardCharsets.UTF_8).trim());
+        else
+        {
+            requireNonNull(value, "the value of the bound is null");
+            if (javaType == long.class)
+            {
+                bound = new Bound<>(boundType, (Long) value);
+            }
+            if (javaType == double.class)
+            {
+                bound = new Bound<>(boundType, (Double) value);
+            }
+            if (javaType == boolean.class)
+            {
+                bound = new Bound<>(boundType, (byte) ((Boolean) value ? 1 : 0));
+            }
+            if (javaType == Slice.class)
+            {
+                bound = new Bound<>(boundType, ((Slice) value).toString(StandardCharsets.UTF_8).trim());
+            }
         }
         return bound;
     }

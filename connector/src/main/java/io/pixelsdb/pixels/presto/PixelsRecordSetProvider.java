@@ -47,6 +47,7 @@ public class PixelsRecordSetProvider implements ConnectorRecordSetProvider
     private final MemoryMappedFile cacheFile;
     private final MemoryMappedFile indexFile;
     private final PixelsFooterCache pixelsFooterCache;
+    private final PixelsPrestoConfig config;
 
     @Inject
     public PixelsRecordSetProvider(PixelsConnectorId connectorId, PixelsPrestoConfig config)
@@ -68,6 +69,7 @@ public class PixelsRecordSetProvider implements ConnectorRecordSetProvider
             this.indexFile = null;
         }
         this.pixelsFooterCache = new PixelsFooterCache();
+        this.config = config;
     }
 
     @Override
@@ -75,6 +77,11 @@ public class PixelsRecordSetProvider implements ConnectorRecordSetProvider
                                   ConnectorSession session,
                                   ConnectorSplit split, List<? extends ColumnHandle> columns)
     {
+        if (config.isLambdaEnabled())
+        {
+            throw new PrestoException(PixelsErrorCode.PIXELS_CONFIG_ERROR,
+                    "PixelsRecordSet does not support lambda coprocessor.");
+        }
         List<PixelsColumnHandle> pixelsColumns = columns.stream()
                 .map(PixelsColumnHandle.class::cast)
                 .collect(toList());
@@ -82,7 +89,7 @@ public class PixelsRecordSetProvider implements ConnectorRecordSetProvider
         PixelsSplit pixelsSplit = (PixelsSplit) split;
         checkArgument(pixelsSplit.getConnectorId().equals(connectorId), "connectorId is not for this connector");
 
-        Storage storage = null;
+        Storage storage;
         try
         {
             storage = StorageFactory.Instance().getStorage(pixelsSplit.getStorageScheme());

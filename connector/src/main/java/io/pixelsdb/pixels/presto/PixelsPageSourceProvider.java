@@ -24,6 +24,7 @@ import com.facebook.presto.spi.*;
 import com.facebook.presto.spi.connector.ConnectorPageSourceProvider;
 import com.facebook.presto.spi.connector.ConnectorTransactionHandle;
 import com.google.inject.Inject;
+import io.airlift.log.Logger;
 import io.pixelsdb.pixels.cache.MemoryMappedFile;
 import io.pixelsdb.pixels.common.physical.Storage;
 import io.pixelsdb.pixels.common.physical.StorageFactory;
@@ -39,6 +40,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
@@ -50,13 +52,15 @@ import static java.util.stream.Collectors.toList;
 public class PixelsPageSourceProvider
         implements ConnectorPageSourceProvider
 {
-    // private static final Logger logger = Logger.get(PixelsPageSourceProvider.class);
+    private static final Logger logger = Logger.get(PixelsPageSourceProvider.class);
 
     private final String connectorId;
     private final MemoryMappedFile cacheFile;
     private final MemoryMappedFile indexFile;
     private final PixelsFooterCache pixelsFooterCache;
     private final PixelsPrestoConfig config;
+
+    private final AtomicInteger localSplitCounter;
 
     @Inject
     public PixelsPageSourceProvider(PixelsConnectorId connectorId, PixelsPrestoConfig config)
@@ -79,6 +83,7 @@ public class PixelsPageSourceProvider
             this.indexFile = null;
         }
         this.pixelsFooterCache = new PixelsFooterCache();
+        this.localSplitCounter = new AtomicInteger(0);
     }
 
     @Override
@@ -101,18 +106,19 @@ public class PixelsPageSourceProvider
 
         try
         {
-            if (config.isLambdaEnabled())
+            if (config.isLambdaEnabled() && this.localSplitCounter.get() >= config.getLocalScanConcurrency())
             {
                 MinIO.ConfigMinIO(config.getMinioEndpoint(), config.getMinioAccessKey(), config.getMinioSecretKey());
                 Storage storage = StorageFactory.Instance().getStorage(Storage.Scheme.minio);
-                return new PixelsPageSource(pixelsSplit, pixelsColumns, includeCols, storage,
-                        cacheFile, indexFile, pixelsFooterCache, getLambdaOutput(pixelsSplit, includeCols));
+                return new PixelsPageSource(pixelsSplit, pixelsColumns, includeCols, storage, cacheFile, indexFile,
+                        pixelsFooterCache, getLambdaOutput(pixelsSplit, includeCols), null);
             }
             else
             {
+                this.localSplitCounter.incrementAndGet();
                 Storage storage = StorageFactory.Instance().getStorage(pixelsSplit.getStorageScheme());
                 return new PixelsPageSource(pixelsSplit, pixelsColumns, includeCols, storage,
-                        cacheFile, indexFile, pixelsFooterCache, null);
+                        cacheFile, indexFile, pixelsFooterCache, null, this.localSplitCounter);
             }
         } catch (IOException e)
         {

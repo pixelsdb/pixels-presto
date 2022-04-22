@@ -50,6 +50,7 @@ public class PixelsPrestoConfig
 
     private String pixelsConfig = null;
     private boolean lambdaEnabled = false;
+    private int localScanConcurrency = -1;
     private String minioOutputFolder = null;
     private String minioEndpointIP = null;
     private int minioEndpointPort = -1;
@@ -153,6 +154,13 @@ public class PixelsPrestoConfig
         return this;
     }
 
+    @Config("local.scan.concurrency")
+    public PixelsPrestoConfig setLocalScanConcurrency(int concurrency)
+    {
+        this.localScanConcurrency = concurrency;
+        return this;
+    }
+
     @Config("minio.output.folder")
     public PixelsPrestoConfig setMinioOutputFolder(String folder)
     {
@@ -184,6 +192,11 @@ public class PixelsPrestoConfig
     public boolean isLambdaEnabled()
     {
         return lambdaEnabled;
+    }
+
+    public int getLocalScanConcurrency()
+    {
+        return localScanConcurrency;
     }
 
     @NotNull

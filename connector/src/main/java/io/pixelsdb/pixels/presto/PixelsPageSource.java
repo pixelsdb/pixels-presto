@@ -46,7 +46,9 @@ import io.pixelsdb.pixels.presto.impl.PixelsTupleDomainPredicate;
 import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.atomic.AtomicInteger;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
 
@@ -69,6 +71,7 @@ class PixelsPageSource implements ConnectorPageSource
     private final PixelsCacheReader cacheReader;
     private final PixelsFooterCache footerCache;
     private final CompletableFuture<?> lambdaOutput;
+    private final AtomicInteger localSplitCounter;
     private final CompletableFuture<?> blocked;
     private long completedBytes = 0L;
     private long readTimeNanos = 0L;
@@ -79,7 +82,8 @@ class PixelsPageSource implements ConnectorPageSource
 
     public PixelsPageSource(PixelsSplit split, List<PixelsColumnHandle> columnHandles, String[] includeCols,
                             Storage storage, MemoryMappedFile cacheFile, MemoryMappedFile indexFile,
-                            PixelsFooterCache pixelsFooterCache, CompletableFuture<?> lambdaOutput)
+                            PixelsFooterCache pixelsFooterCache, CompletableFuture<?> lambdaOutput,
+                            AtomicInteger localSplitCounter)
     {
         this.split = split;
         this.storage = storage;
@@ -88,6 +92,7 @@ class PixelsPageSource implements ConnectorPageSource
         this.numColumnToRead = columnHandles.size();
         this.footerCache = pixelsFooterCache;
         this.lambdaOutput = lambdaOutput;
+        this.localSplitCounter = localSplitCounter;
         this.batchId = 0;
         this.closed = false;
         this.BatchSize = PixelsPrestoConfig.getBatchSize();
@@ -375,6 +380,35 @@ class PixelsPageSource implements ConnectorPageSource
         }
 
         closeReader();
+
+        if (this.localSplitCounter != null)
+        {
+            this.localSplitCounter.decrementAndGet();
+        }
+
+        if (this.lambdaOutput != null)
+        {
+            checkArgument(this.storage.getScheme() == Storage.Scheme.minio,
+                    "lambda is used, but storage scheme is " + this.storage.getScheme().name());
+            for (String path : this.split.getPaths())
+            {
+                try
+                {
+                    IntermediateFileCleaner.Instance().asyncDelete(path, this.storage);
+                } catch (InterruptedException e)
+                {
+                    try
+                    {
+                        logger.error(e, "failed to delete the intermediate file by the cleaner");
+                        this.storage.delete(path, false);
+                    } catch (IOException ex)
+                    {
+                        throw new PrestoException(PixelsErrorCode.PIXELS_STORAGE_ERROR,
+                                "failed to delete the intermediate file", ex);
+                    }
+                }
+            }
+        }
 
         closed = true;
     }
