@@ -46,6 +46,7 @@ import io.pixelsdb.pixels.presto.impl.PixelsTupleDomainPredicate;
 import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
@@ -69,6 +70,7 @@ class PixelsPageSource implements ConnectorPageSource
     private final PixelsCacheReader cacheReader;
     private final PixelsFooterCache footerCache;
     private final CompletableFuture<?> lambdaOutput;
+    private final AtomicInteger localSplitCounter;
     private final CompletableFuture<?> blocked;
     private long completedBytes = 0L;
     private long readTimeNanos = 0L;
@@ -79,7 +81,8 @@ class PixelsPageSource implements ConnectorPageSource
 
     public PixelsPageSource(PixelsSplit split, List<PixelsColumnHandle> columnHandles, String[] includeCols,
                             Storage storage, MemoryMappedFile cacheFile, MemoryMappedFile indexFile,
-                            PixelsFooterCache pixelsFooterCache, CompletableFuture<?> lambdaOutput)
+                            PixelsFooterCache pixelsFooterCache, CompletableFuture<?> lambdaOutput,
+                            AtomicInteger localSplitCounter)
     {
         this.split = split;
         this.storage = storage;
@@ -88,6 +91,7 @@ class PixelsPageSource implements ConnectorPageSource
         this.numColumnToRead = columnHandles.size();
         this.footerCache = pixelsFooterCache;
         this.lambdaOutput = lambdaOutput;
+        this.localSplitCounter = localSplitCounter;
         this.batchId = 0;
         this.closed = false;
         this.BatchSize = PixelsPrestoConfig.getBatchSize();
@@ -375,6 +379,11 @@ class PixelsPageSource implements ConnectorPageSource
         }
 
         closeReader();
+
+        if (this.localSplitCounter != null)
+        {
+            this.localSplitCounter.decrementAndGet();
+        }
 
         closed = true;
     }

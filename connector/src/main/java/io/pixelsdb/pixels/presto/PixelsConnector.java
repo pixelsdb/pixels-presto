@@ -51,7 +51,8 @@ public class PixelsConnector
     private final PixelsRecordSetProvider recordSetProvider;
     private final PixelsSessionProperties sessionProperties;
     private final PixelsTableProperties tableProperties;
-    private TransService transService;
+    private final PixelsPrestoConfig config;
+    private final TransService transService;
 
     @Inject
     public PixelsConnector(
@@ -70,6 +71,7 @@ public class PixelsConnector
         this.recordSetProvider = requireNonNull(recordSetProvider, "recordSetProvider is null");
         this.sessionProperties = requireNonNull(sessionProperties, "sessionProperties is null");
         this.tableProperties = requireNonNull(tableProperties, "tableProperties is null");
+        this.config = requireNonNull(config, "config is null");
         requireNonNull(config, "config is null");
         this.recordCursorEnabled = Boolean.parseBoolean(config.getConfigFactory().getProperty("record.cursor.enabled"));
         this.transService = new TransService(config.getConfigFactory().getProperty("trans.server.host"),
@@ -102,6 +104,7 @@ public class PixelsConnector
         {
             PixelsTransactionHandle handle = (PixelsTransactionHandle) transactionHandle;
             TransContext.Instance().commitQuery(handle.getTransId());
+            cleanIntermediatePathForQuery(handle.getTransId());
         } else
         {
             throw new PrestoException(PixelsErrorCode.PIXELS_TRANS_HANDLE_TYPE_ERROR,
@@ -116,10 +119,27 @@ public class PixelsConnector
         {
             PixelsTransactionHandle handle = (PixelsTransactionHandle) transactionHandle;
             TransContext.Instance().rollbackQuery(handle.getTransId());
+            cleanIntermediatePathForQuery(handle.getTransId());
         } else
         {
             throw new PrestoException(PixelsErrorCode.PIXELS_TRANS_HANDLE_TYPE_ERROR,
                     "The transaction handle is not an instance of PixelsTransactionHandle.");
+        }
+    }
+
+    private void cleanIntermediatePathForQuery(long queryId)
+    {
+        if (config.isLambdaEnabled())
+        {
+            try
+            {
+                IntermediateFileCleaner.Instance().asyncDelete(
+                        config.getMinioOutputFolderForQuery(queryId));
+            } catch (InterruptedException e)
+            {
+                throw new PrestoException(PixelsErrorCode.PIXELS_STORAGE_ERROR,
+                        "Failed to clean intermediate path for the query");
+            }
         }
     }
 

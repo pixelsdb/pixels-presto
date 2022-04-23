@@ -50,6 +50,7 @@ public class PixelsPrestoConfig
 
     private String pixelsConfig = null;
     private boolean lambdaEnabled = false;
+    private int localScanConcurrency = -1;
     private String minioOutputFolder = null;
     private String minioEndpointIP = null;
     private int minioEndpointPort = -1;
@@ -153,9 +154,20 @@ public class PixelsPrestoConfig
         return this;
     }
 
+    @Config("local.scan.concurrency")
+    public PixelsPrestoConfig setLocalScanConcurrency(int concurrency)
+    {
+        this.localScanConcurrency = concurrency;
+        return this;
+    }
+
     @Config("minio.output.folder")
     public PixelsPrestoConfig setMinioOutputFolder(String folder)
     {
+        if (!folder.endsWith("/"))
+        {
+            folder = folder + "/";
+        }
         this.minioOutputFolder = folder;
         return this;
     }
@@ -186,10 +198,24 @@ public class PixelsPrestoConfig
         return lambdaEnabled;
     }
 
+    public int getLocalScanConcurrency()
+    {
+        return localScanConcurrency;
+    }
+
     @NotNull
     public String getMinioOutputFolder()
     {
         return minioOutputFolder;
+    }
+
+    @NotNull
+    public String getMinioOutputFolderForQuery(long queryId)
+    {
+        /* Must end with '/', otherwise it will not be considered
+         * as a folder in S3-like storage.
+         */
+        return this.minioOutputFolder + queryId + "/";
     }
 
     @NotNull
