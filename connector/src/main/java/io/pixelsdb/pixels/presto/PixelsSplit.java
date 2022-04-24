@@ -37,9 +37,10 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
 /**
- * @author: tao, hank
- * @date: Create in 2018-01-20 19:15
- **/
+ * @author tao
+ * @author hank
+ * @date 2018-01-20 19:15
+ */
 public class PixelsSplit
         implements ConnectorSplit {
     private final String connectorId;

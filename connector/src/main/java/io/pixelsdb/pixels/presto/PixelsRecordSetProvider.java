@@ -38,8 +38,8 @@ import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.toList;
 
 /**
- * Created at: 17/02/2022
- * Author: hank
+ * @date 17/02/2022
+ * @author hank
  */
 public class PixelsRecordSetProvider implements ConnectorRecordSetProvider
 {

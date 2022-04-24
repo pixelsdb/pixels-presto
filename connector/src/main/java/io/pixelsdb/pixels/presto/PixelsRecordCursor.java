@@ -52,8 +52,8 @@ import static io.pixelsdb.pixels.core.TypeDescription.Category.*;
 import static java.util.Objects.requireNonNull;
 
 /**
- * Created at: 17/02/2022
- * Author: hank
+ * @date 17/02/2022
+ * @author hank
  */
 public class PixelsRecordCursor implements RecordCursor
 {
@@ -318,7 +318,6 @@ public class PixelsRecordCursor implements RecordCursor
     @Override
     public boolean getBoolean(int field)
     {
-        //return this.byteColumnVectors.get(field).vector[this.rowIndex] > 0;
         return ((ByteColumnVector) this.rowBatch.cols[field]).vector[this.rowIndex] > 0;
     }
 
@@ -438,5 +437,4 @@ public class PixelsRecordCursor implements RecordCursor
             throw new PrestoException(PixelsErrorCode.PIXELS_CLIENT_ERROR, "close page source error.", e);
         }
     }
-
 }

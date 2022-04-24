@@ -29,8 +29,8 @@ import java.util.List;
 import static com.facebook.presto.spi.session.PropertyMetadata.booleanProperty;
 
 /**
- * Created at: 15/02/2022
- * Author: hank
+ * @date 15/02/2022
+ * @author hank
  */
 public class PixelsSessionProperties
 {

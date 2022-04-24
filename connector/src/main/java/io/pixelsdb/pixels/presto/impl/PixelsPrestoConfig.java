@@ -32,9 +32,11 @@ import java.net.InetAddress;
 import java.net.UnknownHostException;
 
 /**
- * @Description: Configuration read from etc/catalog/pixels.properties
- * @author: tao
- * @date: Create in 2018-01-20 11:16
+ * The configuration read from etc/catalog/pixels.properties.
+ *
+ * @author tao
+ * @author hank
+ * @date 2018-01-20 11:16
  **/
 public class PixelsPrestoConfig
 {

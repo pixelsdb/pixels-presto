@@ -35,8 +35,8 @@ import static io.pixelsdb.pixels.presto.block.EncoderUtil.encodeNullsAsBits;
  *
  * We reimplemented writeBlock and readBlock
  *
- * Created at: 19-6-1
- * Author: hank
+ * @date 19-6-1
+ * @author hank
  */
 public class VarcharArrayBlockEncoding implements BlockEncoding
 {

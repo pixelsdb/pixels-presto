@@ -34,8 +34,8 @@ import static com.facebook.presto.spi.session.PropertyMetadata.stringProperty;
  * WITH (storage = 'hdfs');
  * </p>
  *
- * Created at: 14/02/2022
- * Author: hank
+ * @date 14/02/2022
+ * @author hank
  */
 public class PixelsTableProperties
 {

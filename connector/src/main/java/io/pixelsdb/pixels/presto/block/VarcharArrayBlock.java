@@ -44,8 +44,8 @@ import static sun.misc.Unsafe.ARRAY_BYTE_BASE_OFFSET;
  * and replaced the implementation of each methods;
  * 2. add some other methods.
  * <p>
- * Created at: 19-5-31
- * Author: hank
+ * @date 19-5-31
+ * @author hank
  */
 public class VarcharArrayBlock implements Block
 {

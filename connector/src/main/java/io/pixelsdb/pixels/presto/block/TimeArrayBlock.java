@@ -41,8 +41,8 @@ import static io.airlift.slice.SizeOf.sizeOf;
  * 2. change the returned statement of the methods that return Block or
  * BlockEncoding.
  *
- * Created at: 26/04/2021
- * Author: hank
+ * @date 26/04/2021
+ * @author hank
  */
 public class TimeArrayBlock implements Block
 {
