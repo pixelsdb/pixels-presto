@@ -31,8 +31,8 @@ import static io.pixelsdb.pixels.presto.block.EncoderUtil.encodeNullsAsBits;
 /**
  * This class is derived from com.facebook.presto.spi.block.IntArrayBlockEncoding.
  *
- * Created at: 26/04/2021
- * Author: hank
+ * @date 26/04/2021
+ * @author hank
  */
 public class TimeArrayBlockEncoding
         implements BlockEncoding

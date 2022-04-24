@@ -32,8 +32,8 @@ import java.util.List;
 import static java.util.Objects.requireNonNull;
 
 /**
- * Created at: 17/02/2022
- * Author: hank
+ * @date 17/02/2022
+ * @author hank
  */
 public class PixelsRecordSet implements RecordSet
 {

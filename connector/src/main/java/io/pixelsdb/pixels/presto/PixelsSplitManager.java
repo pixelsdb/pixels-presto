@@ -61,8 +61,8 @@ import static java.util.stream.Collectors.toSet;
  * @author hank
  * @author guodong
  * @author tao
- * @date: Create in 2018-01-20 19:16
- **/
+ * @date 2018-01-20 19:16
+ */
 @SuppressWarnings("Duplicates")
 public class PixelsSplitManager
         implements ConnectorSplitManager {

@@ -32,8 +32,8 @@ import static java.util.Objects.requireNonNull;
 /**
  * Parse column type signature to Presto or Pixels data type.
  *
- * Created at: 19-6-1
- * Author: hank
+ * @date 19-6-1
+ * @author hank
  */
 public class PixelsTypeParser
 {
