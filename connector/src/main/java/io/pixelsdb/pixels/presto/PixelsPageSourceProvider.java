@@ -30,9 +30,9 @@ import io.pixelsdb.pixels.common.physical.Storage;
 import io.pixelsdb.pixels.common.physical.StorageFactory;
 import io.pixelsdb.pixels.common.physical.storage.MinIO;
 import io.pixelsdb.pixels.core.PixelsFooterCache;
-import io.pixelsdb.pixels.core.lambda.ScanInput;
-import io.pixelsdb.pixels.core.lambda.ScanInvoker;
-import io.pixelsdb.pixels.core.predicate.TableScanFilter;
+import io.pixelsdb.pixels.executor.lambda.ScanInput;
+import io.pixelsdb.pixels.executor.lambda.ScanInvoker;
+import io.pixelsdb.pixels.executor.predicate.TableScanFilter;
 import io.pixelsdb.pixels.presto.exception.PixelsErrorCode;
 import io.pixelsdb.pixels.presto.impl.PixelsPrestoConfig;
 

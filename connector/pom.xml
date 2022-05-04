@@ -24,16 +24,19 @@
             <artifactId>pixels-common</artifactId>
             <optional>true</optional>
         </dependency>
-
         <dependency>
             <groupId>io.pixelsdb</groupId>
             <artifactId>pixels-core</artifactId>
             <optional>true</optional>
         </dependency>
-
         <dependency>
             <groupId>io.pixelsdb</groupId>
             <artifactId>pixels-cache</artifactId>
+            <optional>true</optional>
+        </dependency>
+        <dependency>
+            <groupId>io.pixelsdb</groupId>
+            <artifactId>pixels-executor</artifactId>
             <optional>true</optional>
         </dependency>
 
