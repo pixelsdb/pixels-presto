@@ -264,7 +264,7 @@ public class PixelsSplit
 
     @Override
     public String toString() {
-        // No need to print order, cacheOrder, and constrain, in most cases.
+        // No need to print order, cacheOrder, and constraint, in most cases.
         return "PixelsSplit{" +
                 "connectorId=" + connectorId +
                 ", schemaName='" + schemaName + '\'' +
