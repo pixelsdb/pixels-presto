@@ -25,6 +25,7 @@ import com.facebook.presto.spi.connector.ConnectorSplitManager;
 import com.facebook.presto.spi.connector.ConnectorTransactionHandle;
 import com.facebook.presto.spi.predicate.Marker;
 import com.facebook.presto.spi.predicate.TupleDomain;
+import com.facebook.presto.spi.type.StandardTypes;
 import com.facebook.presto.spi.type.Type;
 import com.google.common.collect.ImmutableList;
 import io.airlift.log.Logger;
@@ -545,7 +546,16 @@ public class PixelsSplitManager
             requireNonNull(value, "the value of the bound is null");
             if (javaType == long.class)
             {
-                bound = new Bound<>(boundType, (Long) value);
+                switch (prestoType.getTypeSignature().getBase())
+                {
+                    case StandardTypes.DATE:
+                    case StandardTypes.TIME:
+                        bound = new Bound<>(boundType, ((Long) value).intValue());
+                        break;
+                    default:
+                        bound = new Bound<>(boundType, (Long) value);
+                        break;
+                }
             }
             if (javaType == double.class)
             {
