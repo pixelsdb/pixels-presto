@@ -26,7 +26,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableList;
 import io.pixelsdb.pixels.common.physical.Storage;
-import io.pixelsdb.pixels.executor.lambda.ScanOutput;
+import io.pixelsdb.pixels.executor.lambda.output.ScanOutput;
 
 import java.util.Arrays;
 import java.util.Collections;
@@ -264,7 +264,7 @@ public class PixelsSplit
 
     @Override
     public String toString() {
-        // No need to print order, cacheOrder, and constrain, in most cases.
+        // No need to print order, cacheOrder, and constraint, in most cases.
         return "PixelsSplit{" +
                 "connectorId=" + connectorId +
                 ", schemaName='" + schemaName + '\'' +
