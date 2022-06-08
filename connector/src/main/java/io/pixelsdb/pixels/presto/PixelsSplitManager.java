@@ -39,6 +39,9 @@ import io.pixelsdb.pixels.common.physical.StorageFactory;
 import io.pixelsdb.pixels.common.utils.Constants;
 import io.pixelsdb.pixels.common.utils.EtcdUtil;
 import io.pixelsdb.pixels.core.TypeDescription.Category;
+import io.pixelsdb.pixels.core.utils.Pair;
+import io.pixelsdb.pixels.executor.lambda.domain.InputInfo;
+import io.pixelsdb.pixels.executor.lambda.domain.InputSplit;
 import io.pixelsdb.pixels.executor.predicate.Bound;
 import io.pixelsdb.pixels.executor.predicate.ColumnFilter;
 import io.pixelsdb.pixels.executor.predicate.Filter;
@@ -429,6 +432,22 @@ public class PixelsSplitManager
         Collections.shuffle(pixelsSplits);
 
         return new PixelsSplitSource(pixelsSplits);
+    }
+
+    public static Pair<Integer, InputSplit> getInputSplit(PixelsSplit split)
+    {
+        ArrayList<InputInfo> inputInfos = new ArrayList<>();
+        int splitSize = 0;
+        List<String> paths = split.getPaths();
+        List<Integer> rgStarts = split.getRgStarts();
+        List<Integer> rgLengths = split.getRgLengths();
+
+        for (int i = 0; i < paths.size(); ++i)
+        {
+            inputInfos.add(new InputInfo(paths.get(i), rgStarts.get(i), rgLengths.get(i)));
+            splitSize += rgLengths.get(i);
+        }
+        return new Pair<>(splitSize, new InputSplit(inputInfos));
     }
 
     public static TableScanFilter createTableScanFilter(
