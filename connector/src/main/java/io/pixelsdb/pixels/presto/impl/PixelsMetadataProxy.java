@@ -106,7 +106,7 @@ public class PixelsMetadataProxy
     public List<PixelsColumnHandle> getTableColumn(String connectorId, String schemaName, String tableName) throws MetadataException
     {
         List<PixelsColumnHandle> columns = new ArrayList<PixelsColumnHandle>();
-        List<Column> columnsList = metadataService.getColumns(schemaName, tableName);
+        List<Column> columnsList = metadataService.getColumns(schemaName, tableName, false);
         for (int i = 0; i < columnsList.size(); i++) {
             Column c = columnsList.get(i);
             Type prestoType = typeParser.parsePrestoType(c.getType());
