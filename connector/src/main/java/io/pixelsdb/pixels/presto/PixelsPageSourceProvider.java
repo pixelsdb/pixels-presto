@@ -31,11 +31,13 @@ import io.pixelsdb.pixels.common.physical.StorageFactory;
 import io.pixelsdb.pixels.common.physical.storage.MinIO;
 import io.pixelsdb.pixels.core.PixelsFooterCache;
 import io.pixelsdb.pixels.core.utils.Pair;
-import io.pixelsdb.pixels.executor.lambda.ScanInvoker;
+import io.pixelsdb.pixels.executor.lambda.InvokerFactory;
+import io.pixelsdb.pixels.executor.lambda.WorkerType;
 import io.pixelsdb.pixels.executor.lambda.domain.InputSplit;
 import io.pixelsdb.pixels.executor.lambda.domain.OutputInfo;
 import io.pixelsdb.pixels.executor.lambda.domain.ScanTableInfo;
 import io.pixelsdb.pixels.executor.lambda.input.ScanInput;
+import io.pixelsdb.pixels.executor.lambda.output.ScanOutput;
 import io.pixelsdb.pixels.executor.predicate.TableScanFilter;
 import io.pixelsdb.pixels.presto.exception.PixelsErrorCode;
 import io.pixelsdb.pixels.presto.impl.PixelsPrestoConfig;
@@ -155,14 +157,15 @@ public class PixelsPageSourceProvider
                 Storage.Scheme.minio, endpoint, accessKey, secretKey, true);
         scanInput.setOutput(outputInfo);
 
-        return ScanInvoker.invoke(scanInput).whenComplete(((scanOutput, err) -> {
+        return InvokerFactory.Instance().getInvoker(WorkerType.SCAN)
+                .invoke(scanInput).whenComplete(((scanOutput, err) -> {
             if (err != null)
             {
                 throw new RuntimeException("error in lambda invoke.", err);
             }
             try
             {
-                inputSplit.permute(Storage.Scheme.minio, includeCols, scanOutput);
+                inputSplit.permute(Storage.Scheme.minio, includeCols, (ScanOutput) scanOutput);
             }
             catch (Exception e)
             {
