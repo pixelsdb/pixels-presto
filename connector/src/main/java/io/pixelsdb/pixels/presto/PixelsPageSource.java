@@ -506,8 +506,16 @@ class PixelsPageSource implements ConnectorPageSource
                      * Presto reads the unscaled values for decimal type here.
                      * The precision and scale of decimal are automatically processed by Presto.
                      */
-                    DecimalColumnVector dccv = (DecimalColumnVector) vector;
-                    block = new LongArrayBlock(batchSize, Optional.ofNullable(dccv.isNull), dccv.vector);
+                    if (vector instanceof DecimalColumnVector)
+                    {
+                        DecimalColumnVector dccv = (DecimalColumnVector) vector;
+                        block = new LongArrayBlock(batchSize, Optional.ofNullable(dccv.isNull), dccv.vector);
+                    }
+                    else
+                    {
+                        throw new PrestoException(PixelsErrorCode.PIXELS_DATA_TYPE_ERROR,
+                                "long decimal is currently not supported");
+                    }
                     break;
                 case CHAR:
                 case VARCHAR:
@@ -573,6 +581,15 @@ class PixelsPageSource implements ConnectorPageSource
                      * com.facebook.presto.spi.type.AbstractLongType, which creates a LongArrayBlockBuilder.
                      * And this block builder builds a LongArrayBlock.
                      */
+                    for (int i = 0; i < batchSize; ++i)
+                    {
+                        /**
+                         * PIXELS-297:
+                         * times in TimestampColumnVector is in microseconds, whereas in Presto-0.215,
+                         * the values of time are expected to be the milliseconds since the epoch.
+                         */
+                        tscv.times[i] /= 1000;
+                    }
                     block = new LongArrayBlock(batchSize, Optional.ofNullable(tscv.isNull), tscv.times);
                     break;
                 default:

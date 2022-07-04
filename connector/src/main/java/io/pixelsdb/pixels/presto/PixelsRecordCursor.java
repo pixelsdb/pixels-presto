@@ -366,7 +366,12 @@ public class PixelsRecordCursor implements RecordCursor
             case TIME:
                 return ((TimeColumnVector) this.rowBatch.cols[field]).times[this.rowIndex];
             case TIMESTAMP:
-                return ((TimestampColumnVector) this.rowBatch.cols[field]).times[this.rowIndex];
+                /**
+                 * PIXELS-297:
+                 * times in TimestampColumnVector is in microseconds, whereas in Presto-0.215,
+                 * the values of time are expected to be the milliseconds since the epoch.
+                 */
+                return ((TimestampColumnVector) this.rowBatch.cols[field]).times[this.rowIndex] / 1000;
             default:
                 throw new PrestoException(PixelsErrorCode.PIXELS_CURSOR_ERROR,
                         "Column type '" + typeCategory.getPrimaryName() + "' is not Long based.");
@@ -384,8 +389,17 @@ public class PixelsRecordCursor implements RecordCursor
     {
         TypeDescription.Category typeCategory = this.columns.get(field).getTypeCategory();
         checkArgument (typeCategory == VARCHAR || typeCategory == CHAR ||
-                typeCategory == STRING || typeCategory == VARBINARY || typeCategory == BINARY,
+                        typeCategory == STRING || typeCategory == VARBINARY ||
+                        typeCategory == BINARY || typeCategory == DECIMAL,
                 "Column type '" + typeCategory.getPrimaryName() + "' is not Slice based.");
+        if (typeCategory == DECIMAL)
+        {
+            // process long decimal.
+            // LongDecimalColumnVector columnVector = (LongDecimalColumnVector) this.rowBatch.cols[field];
+            // return Slices.wrappedLongArray(columnVector.vector, this.rowIndex*2, 2);
+            throw new PrestoException(PixelsErrorCode.PIXELS_DATA_TYPE_ERROR,
+                    "long decimal is currently not supported");
+        }
         BinaryColumnVector columnVector = (BinaryColumnVector)this.rowBatch.cols[field];
         return Slices.wrappedBuffer(columnVector.vector[this.rowIndex],
                 columnVector.start[this.rowIndex], columnVector.lens[this.rowIndex]);
