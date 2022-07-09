@@ -28,7 +28,6 @@ import com.google.common.collect.ImmutableList;
 import io.pixelsdb.pixels.common.physical.Storage;
 import io.pixelsdb.pixels.executor.lambda.output.ScanOutput;
 
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
@@ -43,36 +42,36 @@ import static java.util.Objects.requireNonNull;
  */
 public class PixelsSplit
         implements ConnectorSplit {
+    private final long queryId;
     private final String connectorId;
     private final String schemaName;
     private final String tableName;
     private String storageScheme;
     private List<String> paths;
-    private final long queryId;
     private List<Integer> rgStarts;
     private List<Integer> rgLengths;
     private int pathIndex;
     private boolean cached;
     private final boolean ensureLocality;
     private final List<HostAddress> addresses;
-    private List<String> order;
-    private final List<String> cacheOrder;
+    private List<String> columnOrder;
+    private List<String> cacheOrder;
     private final TupleDomain<PixelsColumnHandle> constraint;
 
     @JsonCreator
     public PixelsSplit(
+            @JsonProperty("queryId") long queryId,
             @JsonProperty("connectorId") String connectorId,
             @JsonProperty("schemaName") String schemaName,
             @JsonProperty("tableName") String tableName,
             @JsonProperty("storageScheme") String storageScheme,
             @JsonProperty("paths") List<String> paths,
-            @JsonProperty("queryId") long queryId,
             @JsonProperty("rgStarts") List<Integer> rgStarts,
             @JsonProperty("rgLengths") List<Integer> rgLengths,
             @JsonProperty("cached") boolean cached,
             @JsonProperty("ensureLocality") boolean ensureLocality,
             @JsonProperty("addresses") List<HostAddress> addresses,
-            @JsonProperty("order") List<String> order,
+            @JsonProperty("columnOrder") List<String> columnOrder,
             @JsonProperty("cacheOrder") List<String> cacheOrder,
             @JsonProperty("constraint") TupleDomain<PixelsColumnHandle> constraint) {
         this.schemaName = requireNonNull(schemaName, "schema name is null");
@@ -92,7 +91,7 @@ public class PixelsSplit
         this.cached = cached;
         this.ensureLocality = ensureLocality;
         this.addresses = ImmutableList.copyOf(requireNonNull(addresses, "addresses is null"));
-        this.order = requireNonNull(order, "order is null");
+        this.columnOrder = requireNonNull(columnOrder, "order is null");
         this.cacheOrder = requireNonNull(cacheOrder, "cache order is null");
         this.constraint = requireNonNull(constraint, "constraint is null");
     }
@@ -101,10 +100,9 @@ public class PixelsSplit
      * Permute the original file information with the information of the
      * intermediate files produced by serverless.
      * @param scheme the storage scheme of intermediate files
-     * @param includeCols the columns that will be included in the intermediate files
      * @param scanOutput the output of serverless
      */
-    public void permute(Storage.Scheme scheme, String[] includeCols, ScanOutput scanOutput)
+    public void permute(Storage.Scheme scheme, ScanOutput scanOutput)
     {
         requireNonNull(scheme, "scheme is null");
         requireNonNull(scanOutput, "scanOutput is null");
@@ -114,9 +112,11 @@ public class PixelsSplit
         this.paths = scanOutput.getOutputs();
         this.rgStarts = Collections.nCopies(scanOutput.getOutputs().size(), 0);
         this.rgLengths = scanOutput.getRowGroupNums();
-        this.order = Arrays.asList(includeCols);
         this.cached = false;
-        this.cacheOrder.clear();
+        if (!this.columnOrder.isEmpty())
+            this.columnOrder = ImmutableList.of();
+        if (!this.cacheOrder.isEmpty())
+            this.cacheOrder = ImmutableList.of();
     }
 
     @JsonProperty
@@ -221,9 +221,9 @@ public class PixelsSplit
     }
 
     @JsonProperty
-    public List<String> getOrder()
+    public List<String> getColumnOrder()
     {
-        return order;
+        return columnOrder;
     }
 
     @JsonProperty

@@ -36,6 +36,7 @@ import io.pixelsdb.pixels.executor.lambda.WorkerType;
 import io.pixelsdb.pixels.executor.lambda.domain.InputSplit;
 import io.pixelsdb.pixels.executor.lambda.domain.OutputInfo;
 import io.pixelsdb.pixels.executor.lambda.domain.ScanTableInfo;
+import io.pixelsdb.pixels.executor.lambda.domain.StorageInfo;
 import io.pixelsdb.pixels.executor.lambda.input.ScanInput;
 import io.pixelsdb.pixels.executor.lambda.output.ScanOutput;
 import io.pixelsdb.pixels.executor.predicate.TableScanFilter;
@@ -154,7 +155,7 @@ public class PixelsPageSourceProvider
         String accessKey = config.getMinioAccessKey();
         String secretKey = config.getMinioSecretKey();
         OutputInfo outputInfo = new OutputInfo(folder, true,
-                Storage.Scheme.minio, endpoint, accessKey, secretKey, true);
+                new StorageInfo(Storage.Scheme.minio, endpoint, accessKey, secretKey), true);
         scanInput.setOutput(outputInfo);
 
         return InvokerFactory.Instance().getInvoker(WorkerType.SCAN)
@@ -165,7 +166,7 @@ public class PixelsPageSourceProvider
             }
             try
             {
-                inputSplit.permute(Storage.Scheme.minio, includeCols, (ScanOutput) scanOutput);
+                inputSplit.permute(Storage.Scheme.minio, (ScanOutput) scanOutput);
             }
             catch (Exception e)
             {

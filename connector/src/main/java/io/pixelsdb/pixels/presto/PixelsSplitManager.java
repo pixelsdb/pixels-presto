@@ -291,9 +291,10 @@ public class PixelsSplitManager
                                     List<HostAddress> orderedAddresses = toHostAddresses(
                                             storage.getLocations(orderedPaths.get(firstPath)));
 
-                                    PixelsSplit pixelsSplit = new PixelsSplit(connectorId,
+                                    PixelsSplit pixelsSplit = new PixelsSplit(
+                                            transHandle.getTransId(), connectorId,
                                             tableHandle.getSchemaName(), tableHandle.getTableName(),
-                                            table.getStorageScheme(), paths, transHandle.getTransId(),
+                                            table.getStorageScheme(), paths,
                                             Collections.nCopies(paths.size(), 0),
                                             Collections.nCopies(paths.size(), 1),
                                             false, storage.hasLocality(), orderedAddresses,
@@ -329,9 +330,10 @@ public class PixelsSplitManager
                                             ensureLocality = true;
                                         }
 
-                                        PixelsSplit pixelsSplit = new PixelsSplit(connectorId,
+                                        PixelsSplit pixelsSplit = new PixelsSplit(
+                                                transHandle.getTransId(), connectorId,
                                                 tableHandle.getSchemaName(), tableHandle.getTableName(),
-                                                table.getStorageScheme(), Arrays.asList(path), transHandle.getTransId(),
+                                                table.getStorageScheme(), Arrays.asList(path),
                                                 Arrays.asList(curFileRGIdx), Arrays.asList(splitSize),
                                                 true, ensureLocality, compactAddresses, order.getColumnOrder(),
                                                 cacheColumnletOrders, constraint);
@@ -387,9 +389,10 @@ public class PixelsSplitManager
                             List<HostAddress> orderedAddresses = toHostAddresses(
                                     storage.getLocations(orderedPaths.get(firstPath)));
 
-                            PixelsSplit pixelsSplit = new PixelsSplit(connectorId,
+                            PixelsSplit pixelsSplit = new PixelsSplit(
+                                    transHandle.getTransId(), connectorId,
                                     tableHandle.getSchemaName(), tableHandle.getTableName(),
-                                    table.getStorageScheme(), paths, transHandle.getTransId(),
+                                    table.getStorageScheme(), paths,
                                     Collections.nCopies(paths.size(), 0),
                                     Collections.nCopies(paths.size(), 1),
                                     false, storage.hasLocality(), orderedAddresses,
@@ -411,9 +414,10 @@ public class PixelsSplitManager
                             {
                                 List<HostAddress> compactAddresses = toHostAddresses(storage.getLocations(path));
 
-                                PixelsSplit pixelsSplit = new PixelsSplit(connectorId,
+                                PixelsSplit pixelsSplit = new PixelsSplit(
+                                        transHandle.getTransId(), connectorId,
                                         tableHandle.getSchemaName(), tableHandle.getTableName(),
-                                        table.getStorageScheme(), Arrays.asList(path), transHandle.getTransId(),
+                                        table.getStorageScheme(), Arrays.asList(path),
                                         Arrays.asList(curFileRGIdx), Arrays.asList(splitSize),
                                         false, storage.hasLocality(), compactAddresses,
                                         order.getColumnOrder(), new ArrayList<>(0), constraint);

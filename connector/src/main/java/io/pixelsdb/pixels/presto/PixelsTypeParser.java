@@ -63,6 +63,10 @@ public class PixelsTypeParser
     {
         try
         {
+            if (signature.startsWith("timestamp("))
+            {
+                signature = signature.substring(0, signature.indexOf('('));
+            }
             return this.baseRegistry.getType(TypeSignature.parseTypeSignature(signature));
         }
         catch (RuntimeException e)
