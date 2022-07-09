@@ -23,7 +23,10 @@ import com.facebook.presto.spi.predicate.Domain;
 import com.facebook.presto.spi.predicate.Range;
 import com.facebook.presto.spi.predicate.TupleDomain;
 import com.facebook.presto.spi.predicate.ValueSet;
-import com.facebook.presto.spi.type.*;
+import com.facebook.presto.spi.type.DateType;
+import com.facebook.presto.spi.type.TimeType;
+import com.facebook.presto.spi.type.TimestampType;
+import com.facebook.presto.spi.type.Type;
 import com.google.common.collect.ImmutableList;
 import io.pixelsdb.pixels.core.exception.PixelsReaderException;
 import io.pixelsdb.pixels.core.predicate.PixelsPredicate;
@@ -334,28 +337,21 @@ public class PixelsTupleDomainPredicate<C>
     private <T extends Comparable<T>> Domain createDomain(Type type, boolean hasNullValue,
                                                           RangeStats<T> rangeStats)
     {
-        // PIXELS-103: what's the purpose of this if branch?
-        //if (type instanceof VarcharType || type instanceof CharType)
-        //{
-        //    return createDomain(type, hasNullValue, rangeStats, value -> value);
-        //}
-        // return createDomain(type, hasNullValue, rangeStats, value -> value);
-        // PIXELS-103: avoid additional function call.
         T min = rangeStats.getMinimum();
         T max = rangeStats.getMaximum();
 
-        if (min != null && max != null)
+        if (rangeStats.hasMinimum() && rangeStats.hasMaximum())
         {
             return Domain.create(
                     ValueSet.ofRanges(
                             Range.range(type, min, true, max, true)),
                     hasNullValue);
         }
-        if (max != null)
+        if (rangeStats.hasMaximum())
         {
             return Domain.create(ValueSet.ofRanges(Range.lessThanOrEqual(type, max)), hasNullValue);
         }
-        if (min != null)
+        if (rangeStats.hasMinimum())
         {
             return Domain.create(ValueSet.ofRanges(Range.greaterThanOrEqual(type, min)), hasNullValue);
         }
@@ -374,18 +370,18 @@ public class PixelsTupleDomainPredicate<C>
         F min = rangeStats.getMinimum();
         F max = rangeStats.getMaximum();
 
-        if (min != null && max != null)
+        if (rangeStats.hasMinimum() && rangeStats.hasMaximum())
         {
             return Domain.create(
                     ValueSet.ofRanges(
                             Range.range(type, function.apply(min), true, function.apply(max), true)),
                     hasNullValue);
         }
-        if (max != null)
+        if (rangeStats.hasMaximum())
         {
             return Domain.create(ValueSet.ofRanges(Range.lessThanOrEqual(type, function.apply(max))), hasNullValue);
         }
-        if (min != null)
+        if (rangeStats.hasMinimum())
         {
             return Domain.create(ValueSet.ofRanges(Range.greaterThanOrEqual(type, function.apply(min))), hasNullValue);
         }
