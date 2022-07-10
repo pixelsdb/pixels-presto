@@ -238,6 +238,7 @@ class PixelsPageSource implements ConnectorPageSource
                          */
                         return false;
                     }
+                    this.recordReader = this.pixelsReader.read(this.option);
                 } else
                 {
                     logger.error("pixelsReader error: storage handler is null");

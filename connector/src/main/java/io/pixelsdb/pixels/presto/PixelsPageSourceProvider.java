@@ -117,11 +117,13 @@ public class PixelsPageSourceProvider
         {
             if (config.isLambdaEnabled() && this.localSplitCounter.get() >= config.getLocalScanConcurrency())
             {
+                boolean[] projection = new boolean[includeCols.length];
+                Arrays.fill(projection, true);
                 MinIO.ConfigMinIO(config.getMinioEndpoint(), config.getMinioAccessKey(), config.getMinioSecretKey());
                 Storage storage = StorageFactory.Instance().getStorage(Storage.Scheme.minio);
                 IntermediateFileCleaner.Instance().registerStorage(storage);
                 return new PixelsPageSource(pixelsSplit, pixelsColumns, includeCols, storage, cacheFile, indexFile,
-                        pixelsFooterCache, getLambdaOutput(pixelsSplit, includeCols), null);
+                        pixelsFooterCache, getLambdaOutput(pixelsSplit, includeCols, projection), null);
             }
             else
             {
@@ -136,19 +138,20 @@ public class PixelsPageSourceProvider
         }
     }
 
-    private CompletableFuture<?> getLambdaOutput(PixelsSplit inputSplit, String[] includeCols)
+    private CompletableFuture<?> getLambdaOutput(PixelsSplit inputSplit, String[] columnsToRead, boolean[] projection)
     {
         ScanInput scanInput = new ScanInput();
         scanInput.setQueryId(inputSplit.getQueryId());
         ScanTableInfo tableInfo = new ScanTableInfo();
         tableInfo.setTableName(inputSplit.getTableName());
-        tableInfo.setColumnsToRead(includeCols);
+        tableInfo.setColumnsToRead(columnsToRead);
         Pair<Integer, InputSplit> inputSplitPair = getInputSplit(inputSplit);
         tableInfo.setInputSplits(Arrays.asList(inputSplitPair.getRight()));
         TableScanFilter filter = createTableScanFilter(inputSplit.getSchemaName(),
-                inputSplit.getTableName(), includeCols, inputSplit.getConstraint());
+                inputSplit.getTableName(), columnsToRead, inputSplit.getConstraint());
         tableInfo.setFilter(JSON.toJSONString(filter));
         scanInput.setTableInfo(tableInfo);
+        scanInput.setScanProjection(projection);
         // logger.info("table scan filter: " + tableInfo.getFilter());
         String folder = config.getMinioOutputFolderForQuery(inputSplit.getQueryId());
         String endpoint = config.getMinioEndpoint();
