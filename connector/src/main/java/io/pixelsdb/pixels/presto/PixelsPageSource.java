@@ -60,7 +60,7 @@ class PixelsPageSource implements ConnectorPageSource
 {
     private static final Logger logger = Logger.get(PixelsPageSource.class);
     private final int BatchSize;
-    private PixelsSplit split;
+    private final PixelsSplit split;
     private final List<PixelsColumnHandle> columns;
     private final String[] includeCols;
     private final Storage storage;

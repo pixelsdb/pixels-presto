@@ -118,23 +118,23 @@ public class PixelsTupleDomainPredicate<C>
             Domain predicateDomain = domains.get(columnReference.getColumn());
             if (predicateDomain == null)
             {
-                // no predicate on this column, so continue
+                // no predicate on this column, continue
                 continue;
             }
             ColumnStats columnStats = statisticsByColumnIndex.get(columnReference.getPhysicalOrdinal());
             if (columnStats == null)
             {
-                // no column statistics, so continue
+                // no column statistics, continue
                 continue;
             }
 
-            if (domainMatches(columnReference, predicateDomain, numberOfRows, columnStats))
+            if (!domainMatches(columnReference, predicateDomain, numberOfRows, columnStats))
             {
-                return true;
+                return false;
             }
         }
 
-        return false;
+        return true;
     }
 
     /**
@@ -172,7 +172,7 @@ public class PixelsTupleDomainPredicate<C>
      * @param predicateDomain the predicate domain on the column.
      * @param numberOfRows the total number of rows in this horizontal unit (file, row group, or pixel).
      * @param columnStats the statistics on the column.
-     * @return
+     * @return true if the columnStats matches the predicateDomain
      */
     private boolean domainMatches(ColumnReference<C> columnReference, Domain predicateDomain,
                                    long numberOfRows, ColumnStats columnStats)
@@ -246,7 +246,7 @@ public class PixelsTupleDomainPredicate<C>
      * @param rowCount the number of rows in the corresponding horizontal data unit
      *                 (pixel, row group, file, etc.).
      * @param columnStats the statistics of this column in the horizontal data unit.
-     * @return
+     * @return the domain object of the columnStats
      */
     private Domain getDomain(Type type, long rowCount, ColumnStats columnStats)
     {
@@ -357,10 +357,10 @@ public class PixelsTupleDomainPredicate<C>
         }
 
         /**
-         * Comments added in PIXELS-103:
-         * If no min nor max is defined, we create a column domain to accepted any predicate.
+         * PIXELS-170:
+         * If min and max are not defined, we create a column domain to reject all predicates.
          */
-        return Domain.create(ValueSet.all(type), hasNullValue);
+        return Domain.create(ValueSet.none(type), hasNullValue);
     }
 
     private <F, T extends Comparable<T>> Domain createDomain(Type type, boolean hasNullValue,
@@ -386,7 +386,11 @@ public class PixelsTupleDomainPredicate<C>
             return Domain.create(ValueSet.ofRanges(Range.greaterThanOrEqual(type, function.apply(min))), hasNullValue);
         }
 
-        return Domain.create(ValueSet.all(type), hasNullValue);
+        /**
+         * PIXELS-170:
+         * If min and max are not defined, we create a column domain to reject all predicates.
+         */
+        return Domain.create(ValueSet.none(type), hasNullValue);
     }
 
     public static class ColumnReference<C>
