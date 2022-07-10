@@ -23,9 +23,9 @@ package io.pixelsdb.pixels.presto.exception;
  * Created at: 18-12-9
  * Author: hank
  */
-public class ListenerExecption extends Exception
+public class ListenerException extends Exception
 {
-    public ListenerExecption(String msg)
+    public ListenerException(String msg)
     {
         super(msg);
     }

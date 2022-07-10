@@ -22,7 +22,7 @@ package io.pixelsdb.pixels.presto;
 import io.pixelsdb.pixels.common.utils.ConfigFactory;
 import io.pixelsdb.pixels.common.utils.DateUtil;
 import io.pixelsdb.pixels.common.utils.HttpUtil;
-import io.pixelsdb.pixels.presto.exception.ListenerExecption;
+import io.pixelsdb.pixels.presto.exception.ListenerException;
 import com.alibaba.fastjson.JSONObject;
 import com.alibaba.fastjson.parser.ParserConfig;
 import com.facebook.presto.spi.PrestoException;
@@ -91,7 +91,7 @@ public class PixelsEventListener implements EventListener
         } catch (IOException e)
         {
             throw new PrestoException(PIXELS_EVENT_LISTENER_ERROR,
-                    new ListenerExecption("can not create log writer."));
+                    new ListenerException("can not create log writer."));
         }
     }
 
@@ -160,7 +160,7 @@ public class PixelsEventListener implements EventListener
                         if (elapsed < 0 || queued < 0 || analysis < 0 ||
                                 planning < 0 || finishing < 0 || inputDataSize < 0)
                         {
-                            throw new ListenerExecption("elapsedTime:" + statsObject.getString("elapsedTime") +
+                            throw new ListenerException("elapsedTime:" + statsObject.getString("elapsedTime") +
                                     ",queuedTime:" + statsObject.getString("queuedTime") +
                                     ",analysisTime:" + statsObject.getString("analysisTime") +
                                     ",totalPlanningTime:" + statsObject.getString("totalPlanningTime") +
@@ -178,7 +178,7 @@ public class PixelsEventListener implements EventListener
                 {
                     logger.error("can not write log in pixels event listener.");
                     logger.info("query id: " + queryId + ", user: " + user + ", uri: " + uri.toString());
-                } catch (ListenerExecption e)
+                } catch (ListenerException e)
                 {
                     logger.error("can not parse metrics in presto json.");
                     logger.info("query id: " + queryId + ", user: " + user + ", uri: " + uri.toString());
