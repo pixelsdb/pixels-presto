@@ -28,7 +28,7 @@ import io.airlift.log.Logger;
 import io.pixelsdb.pixels.cache.MemoryMappedFile;
 import io.pixelsdb.pixels.common.physical.Storage;
 import io.pixelsdb.pixels.common.physical.StorageFactory;
-import io.pixelsdb.pixels.common.physical.storage.MinIO;
+import io.pixelsdb.pixels.common.physical.storage.Minio;
 import io.pixelsdb.pixels.core.PixelsFooterCache;
 import io.pixelsdb.pixels.core.utils.Pair;
 import io.pixelsdb.pixels.executor.lambda.InvokerFactory;
@@ -119,8 +119,11 @@ public class PixelsPageSourceProvider
             {
                 boolean[] projection = new boolean[includeCols.length];
                 Arrays.fill(projection, true);
-                MinIO.ConfigMinIO(config.getMinioEndpoint(), config.getMinioAccessKey(), config.getMinioSecretKey());
-                Storage storage = StorageFactory.Instance().getStorage(Storage.Scheme.minio);
+                if (config.getOutputScheme() == Storage.Scheme.minio)
+                {
+                    Minio.ConfigMinio(config.getOutputEndpoint(), config.getOutputAccessKey(), config.getOutputSecretKey());
+                }
+                Storage storage = StorageFactory.Instance().getStorage(config.getOutputScheme());
                 IntermediateFileCleaner.Instance().registerStorage(storage);
                 return new PixelsPageSource(pixelsSplit, pixelsColumns, includeCols, storage, cacheFile, indexFile,
                         pixelsFooterCache, getLambdaOutput(pixelsSplit, includeCols, projection), null);
@@ -153,12 +156,12 @@ public class PixelsPageSourceProvider
         scanInput.setTableInfo(tableInfo);
         scanInput.setScanProjection(projection);
         // logger.info("table scan filter: " + tableInfo.getFilter());
-        String folder = config.getMinioOutputFolderForQuery(inputSplit.getQueryId());
-        String endpoint = config.getMinioEndpoint();
-        String accessKey = config.getMinioAccessKey();
-        String secretKey = config.getMinioSecretKey();
+        String folder = config.getOutputFolderForQuery(inputSplit.getQueryId());
+        String endpoint = config.getOutputEndpoint();
+        String accessKey = config.getOutputAccessKey();
+        String secretKey = config.getOutputSecretKey();
         OutputInfo outputInfo = new OutputInfo(folder, true,
-                new StorageInfo(Storage.Scheme.minio, endpoint, accessKey, secretKey), true);
+                new StorageInfo(config.getOutputScheme(), endpoint, accessKey, secretKey), true);
         scanInput.setOutput(outputInfo);
 
         return InvokerFactory.Instance().getInvoker(WorkerType.SCAN)
@@ -169,7 +172,7 @@ public class PixelsPageSourceProvider
             }
             try
             {
-                inputSplit.permute(Storage.Scheme.minio, (ScanOutput) scanOutput);
+                inputSplit.permute(config.getOutputScheme(), (ScanOutput) scanOutput);
             }
             catch (Exception e)
             {
