@@ -22,14 +22,12 @@ package io.pixelsdb.pixels.presto.impl;
 import com.facebook.presto.spi.PrestoException;
 import io.airlift.configuration.Config;
 import io.airlift.log.Logger;
+import io.pixelsdb.pixels.common.physical.Storage;
 import io.pixelsdb.pixels.common.utils.ConfigFactory;
 import io.pixelsdb.pixels.presto.exception.PixelsErrorCode;
-import software.amazon.awssdk.regions.internal.util.EC2MetadataUtils;
 
 import javax.validation.constraints.NotNull;
 import java.io.IOException;
-import java.net.InetAddress;
-import java.net.UnknownHostException;
 
 /**
  * The configuration read from etc/catalog/pixels.properties.
@@ -52,13 +50,13 @@ public class PixelsPrestoConfig
 
     private String pixelsConfig = null;
     private boolean lambdaEnabled = false;
+    private boolean cleanLocalResult = true;
     private int localScanConcurrency = -1;
-    private String minioOutputFolder = null;
-    private String minioEndpointIP = null;
-    private int minioEndpointPort = -1;
-    private String minioEndpoint = null;
-    private String minioAccessKey = null;
-    private String minioSecretKey = null;
+    private Storage.Scheme outputScheme = null;
+    private String outputFolder = null;
+    private String outputEndpoint = null;
+    private String outputAccessKey = null;
+    private String outputSecretKey = null;
 
     @Config("pixels.config")
     public PixelsPrestoConfig setPixelsConfig (String pixelsConfig)
@@ -137,22 +135,13 @@ public class PixelsPrestoConfig
     public PixelsPrestoConfig setLambdaEnabled(boolean enabled)
     {
         this.lambdaEnabled = enabled;
-        if (enabled)
-        {
-            this.minioEndpointIP = EC2MetadataUtils.getInstanceInfo().getPrivateIp();
-        }
-        else
-        {
-            try
-            {
-                this.minioEndpointIP = InetAddress.getLocalHost().getHostAddress();
-            } catch (UnknownHostException e)
-            {
-                logger.error(e, "failed to get local ip address when lambda is disabled");
-                this.minioEndpointIP = "127.0.0.1";
-            }
-        }
-        logger.info("using minio endpoint ip address: " + this.minioEndpointIP);
+        return this;
+    }
+
+    @Config("clean.local.result")
+    public PixelsPrestoConfig setCleanLocalResult(boolean cleanLocalResult)
+    {
+        this.cleanLocalResult = cleanLocalResult;
         return this;
     }
 
@@ -163,35 +152,42 @@ public class PixelsPrestoConfig
         return this;
     }
 
-    @Config("minio.output.folder")
-    public PixelsPrestoConfig setMinioOutputFolder(String folder)
+    @Config("output.scheme")
+    public PixelsPrestoConfig setOutputScheme(String outputScheme)
+    {
+        this.outputScheme = Storage.Scheme.from(outputScheme);
+        return this;
+    }
+
+    @Config("output.folder")
+    public PixelsPrestoConfig setOutputFolder(String folder)
     {
         if (!folder.endsWith("/"))
         {
             folder = folder + "/";
         }
-        this.minioOutputFolder = folder;
+        this.outputFolder = folder;
         return this;
     }
 
-    @Config("minio.endpoint.port")
-    public PixelsPrestoConfig setMinioEndpointPort(int port)
+    @Config("output.access.key")
+    public PixelsPrestoConfig setOutputAccessKey(String accessKey)
     {
-        this.minioEndpointPort = port;
+        this.outputAccessKey = accessKey;
         return this;
     }
 
-    @Config("minio.access.key")
-    public PixelsPrestoConfig setMinioAccessKey(String accessKey)
+    @Config("output.secret.key")
+    public PixelsPrestoConfig setOutputSecretKey(String secretKey)
     {
-        this.minioAccessKey = accessKey;
+        this.outputSecretKey = secretKey;
         return this;
     }
 
-    @Config("minio.secret.key")
-    public PixelsPrestoConfig setMinioSecretKey(String secretKey)
+    @Config("output.endpoint")
+    public PixelsPrestoConfig setOutputEndpoint(String endpoint)
     {
-        this.minioSecretKey = secretKey;
+        this.outputEndpoint = endpoint;
         return this;
     }
 
@@ -205,52 +201,48 @@ public class PixelsPrestoConfig
         return localScanConcurrency;
     }
 
-    @NotNull
-    public String getMinioOutputFolder()
+    public boolean isCleanLocalResult()
     {
-        return minioOutputFolder;
+        return cleanLocalResult;
     }
 
     @NotNull
-    public String getMinioOutputFolderForQuery(long queryId)
+    public Storage.Scheme getOutputScheme()
+    {
+        return outputScheme;
+    }
+
+    @NotNull
+    public String getOutputFolder()
+    {
+        return outputFolder;
+    }
+
+    @NotNull
+    public String getOutputFolderForQuery(long queryId)
     {
         /* Must end with '/', otherwise it will not be considered
          * as a folder in S3-like storage.
          */
-        return this.minioOutputFolder + queryId + "/";
+        return this.outputFolder + queryId + "/";
     }
 
     @NotNull
-    public String getMinioEndpointIP()
+    public String getOutputAccessKey()
     {
-        return minioEndpointIP;
-    }
-
-    public int getMinioEndpointPort()
-    {
-        return minioEndpointPort;
+        return outputAccessKey;
     }
 
     @NotNull
-    public String getMinioAccessKey()
+    public String getOutputSecretKey()
     {
-        return minioAccessKey;
+        return outputSecretKey;
     }
 
     @NotNull
-    public String getMinioSecretKey()
+    public String getOutputEndpoint()
     {
-        return minioSecretKey;
-    }
-
-    @NotNull
-    public String getMinioEndpoint()
-    {
-        if (this.minioEndpoint == null)
-        {
-            this.minioEndpoint = "http://" + this.minioEndpointIP + ":" + minioEndpointPort;
-        }
-        return minioEndpoint;
+        return outputEndpoint;
     }
 
     /**

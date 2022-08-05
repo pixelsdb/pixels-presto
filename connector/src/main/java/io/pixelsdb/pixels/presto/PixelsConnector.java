@@ -133,8 +133,10 @@ public class PixelsConnector
         {
             try
             {
-                IntermediateFileCleaner.Instance().asyncDelete(
-                        config.getMinioOutputFolderForQuery(queryId));
+                if (config.isCleanLocalResult())
+                {
+                    IntermediateFileCleaner.Instance().asyncDelete(config.getOutputFolderForQuery(queryId));
+                }
             } catch (InterruptedException e)
             {
                 throw new PrestoException(PixelsErrorCode.PIXELS_STORAGE_ERROR,
