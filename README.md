@@ -19,6 +19,22 @@ therefore use `mvn install` to install Pixels modules into your local maven repo
 Ensure that Pixels and other prerequisites are installed following the instructions
 [here](https://github.com/pixelsdb/pixels#installation-in-aws).
 
+### Install Presto
+
+Currently, Pixels is compatible with Presto-0.215.
+Download and install Presto-0.215 following the instructions [here](https://prestodb.io/docs/0.215/installation/deployment.html).
+
+Here, we install Presto to `~/opt/presto-server-0.215` and create a link for it:
+```bash
+ln -s presto-server-0.215 presto-server
+```
+Then download [presto-cli](https://prestodb.io/docs/0.215/installation/cli.html) into `~/opt/presto-server/bin/`
+and give executable permission to it.
+Some scripts in Presto may require python:
+```bash
+sudo apt-get install python
+```
+
 ### Install Pixels Connector
 There are two important directories in the home of presto-server: `etc` and `plugin`.
 To install Pixels connector, decompress `pixels-presto-connector-*.zip` into the `plugin` directory.
