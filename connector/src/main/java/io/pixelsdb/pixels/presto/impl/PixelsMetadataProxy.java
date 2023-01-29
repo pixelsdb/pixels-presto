@@ -157,7 +157,7 @@ public class PixelsMetadataProxy
 
     public boolean createView (String schemaName, String viewName, String viewData) throws MetadataException
     {
-        return metadataService.createView(schemaName, viewName, viewData);
+        return metadataService.createView(schemaName, viewName, viewData, false);
     }
 
     public boolean dropView (String schemaName, String viewName) throws MetadataException
