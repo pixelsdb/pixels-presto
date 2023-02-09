@@ -19,9 +19,11 @@
  */
 package io.pixelsdb.pixels.presto;
 
+import com.facebook.presto.common.predicate.TupleDomain;
 import com.facebook.presto.spi.ConnectorSplit;
 import com.facebook.presto.spi.HostAddress;
-import com.facebook.presto.spi.predicate.TupleDomain;
+import com.facebook.presto.spi.NodeProvider;
+import com.facebook.presto.spi.schedule.NodeSelectionStrategy;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableList;
@@ -172,17 +174,6 @@ public class PixelsSplit
         return cached;
     }
 
-    @Override
-    public boolean isRemotelyAccessible()
-    {
-        /**
-         * PIXELS-222:
-         * Some storage systems, such as S3, does not provide data
-         * locality. We should not force Presto to access local data.
-         */
-        return !ensureLocality;
-    }
-
     public boolean nextPath()
     {
         if (this.pathIndex+1 < this.paths.size())
@@ -215,12 +206,6 @@ public class PixelsSplit
     }
 
     @JsonProperty
-    @Override
-    public List<HostAddress> getAddresses() {
-        return addresses;
-    }
-
-    @JsonProperty
     public List<String> getColumnOrder()
     {
         return columnOrder;
@@ -230,6 +215,27 @@ public class PixelsSplit
     public List<String> getCacheOrder()
     {
         return cacheOrder;
+    }
+
+    @Override
+    public NodeSelectionStrategy getNodeSelectionStrategy()
+    {
+        /**
+         * PIXELS-222:
+         * Some storage systems, such as S3, does not provide data
+         * locality. We should not force Presto to access local data.
+         */
+        if (ensureLocality)
+        {
+            return NodeSelectionStrategy.HARD_AFFINITY;
+        }
+        return NodeSelectionStrategy.NO_PREFERENCE;
+    }
+
+    @Override
+    public List<HostAddress> getPreferredNodes(NodeProvider nodeProvider)
+    {
+        return addresses;
     }
 
     @Override

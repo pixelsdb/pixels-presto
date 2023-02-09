@@ -19,10 +19,10 @@
  */
 package io.pixelsdb.pixels.presto;
 
+import com.facebook.presto.common.type.Type;
+import com.facebook.presto.common.type.TypeManager;
+import com.facebook.presto.common.type.TypeSignature;
 import com.facebook.presto.spi.PrestoException;
-import com.facebook.presto.spi.type.Type;
-import com.facebook.presto.spi.type.TypeManager;
-import com.facebook.presto.spi.type.TypeSignature;
 import com.google.inject.Inject;
 import io.pixelsdb.pixels.core.TypeDescription;
 import io.pixelsdb.pixels.presto.exception.PixelsErrorCode;

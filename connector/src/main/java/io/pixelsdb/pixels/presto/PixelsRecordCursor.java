@@ -19,11 +19,11 @@
  */
 package io.pixelsdb.pixels.presto;
 
+import com.facebook.airlift.log.Logger;
+import com.facebook.presto.common.predicate.Domain;
+import com.facebook.presto.common.type.Type;
 import com.facebook.presto.spi.PrestoException;
 import com.facebook.presto.spi.RecordCursor;
-import com.facebook.presto.spi.predicate.Domain;
-import com.facebook.presto.spi.type.Type;
-import io.airlift.log.Logger;
 import io.airlift.slice.Slice;
 import io.airlift.slice.Slices;
 import io.pixelsdb.pixels.cache.MemoryMappedFile;

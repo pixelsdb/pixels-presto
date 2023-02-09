@@ -19,7 +19,7 @@
  */
 package io.pixelsdb.pixels.presto;
 
-import io.airlift.log.Logger;
+import com.facebook.airlift.log.Logger;
 import io.pixelsdb.pixels.common.physical.Storage;
 
 import java.util.concurrent.ExecutorService;

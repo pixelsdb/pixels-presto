@@ -19,13 +19,13 @@
  */
 package io.pixelsdb.pixels.presto;
 
+import com.facebook.airlift.log.Logger;
+import com.facebook.presto.common.Page;
+import com.facebook.presto.common.block.*;
+import com.facebook.presto.common.predicate.Domain;
+import com.facebook.presto.common.type.Type;
 import com.facebook.presto.spi.ConnectorPageSource;
-import com.facebook.presto.spi.Page;
 import com.facebook.presto.spi.PrestoException;
-import com.facebook.presto.spi.block.*;
-import com.facebook.presto.spi.predicate.Domain;
-import com.facebook.presto.spi.type.Type;
-import io.airlift.log.Logger;
 import io.pixelsdb.pixels.cache.MemoryMappedFile;
 import io.pixelsdb.pixels.cache.PixelsCacheReader;
 import io.pixelsdb.pixels.common.physical.Storage;
@@ -44,7 +44,10 @@ import io.pixelsdb.pixels.presto.impl.PixelsPrestoConfig;
 import io.pixelsdb.pixels.presto.impl.PixelsTupleDomainPredicate;
 
 import java.io.IOException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -265,6 +268,16 @@ class PixelsPageSource implements ConnectorPageSource
             return this.completedBytes;
         }
         return this.completedBytes + (recordReader != null ? recordReader.getCompletedBytes() : 0);
+    }
+
+    /**
+     * Gets the number of input rows processed by this page source so far.
+     * If number is not available, this method should return zero.
+     */
+    @Override
+    public long getCompletedPositions()
+    {
+        return 0;
     }
 
     @Override

@@ -19,15 +19,15 @@
  */
 package io.pixelsdb.pixels.presto;
 
+import com.facebook.airlift.bootstrap.Bootstrap;
+import com.facebook.airlift.json.JsonModule;
+import com.facebook.airlift.log.Logger;
 import com.facebook.presto.spi.ConnectorHandleResolver;
 import com.facebook.presto.spi.PrestoException;
 import com.facebook.presto.spi.connector.Connector;
 import com.facebook.presto.spi.connector.ConnectorContext;
 import com.facebook.presto.spi.connector.ConnectorFactory;
 import com.google.inject.Injector;
-import io.airlift.bootstrap.Bootstrap;
-import io.airlift.json.JsonModule;
-import io.airlift.log.Logger;
 import io.pixelsdb.pixels.presto.exception.PixelsErrorCode;
 
 import java.util.Map;
@@ -65,7 +65,6 @@ public class PixelsConnectorFactory
                     new PixelsModule(connectorId, context.getTypeManager()));
 
             Injector injector = app
-                    .strictConfig()
                     .doNotInitializeLogging()
                     .setRequiredConfigurationProperties(requiredConfig)
                     .initialize();

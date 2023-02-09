@@ -19,11 +19,11 @@
  */
 package io.pixelsdb.pixels.presto.exception;
 
-import com.facebook.presto.spi.ErrorCode;
+import com.facebook.presto.common.ErrorCode;
 import com.facebook.presto.spi.ErrorCodeSupplier;
-import com.facebook.presto.spi.ErrorType;
+import com.facebook.presto.common.ErrorType;
 
-import static com.facebook.presto.spi.ErrorType.*;
+import static com.facebook.presto.common.ErrorType.*;
 
 public enum PixelsErrorCode
         implements ErrorCodeSupplier

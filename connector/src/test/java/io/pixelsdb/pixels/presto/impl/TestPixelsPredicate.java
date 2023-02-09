@@ -19,10 +19,10 @@
  */
 package io.pixelsdb.pixels.presto.impl;
 
-import com.facebook.presto.spi.predicate.Domain;
-import com.facebook.presto.spi.predicate.TupleDomain;
-import com.facebook.presto.spi.type.BigintType;
-import com.facebook.presto.spi.type.VarcharType;
+import com.facebook.presto.common.predicate.Domain;
+import com.facebook.presto.common.type.BigintType;
+import com.facebook.presto.common.type.VarcharType;
+import com.facebook.presto.common.predicate.TupleDomain;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import io.airlift.slice.Slices;

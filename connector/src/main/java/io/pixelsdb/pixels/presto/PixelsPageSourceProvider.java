@@ -20,11 +20,11 @@
 package io.pixelsdb.pixels.presto;
 
 import com.alibaba.fastjson.JSON;
+import com.facebook.airlift.log.Logger;
 import com.facebook.presto.spi.*;
 import com.facebook.presto.spi.connector.ConnectorPageSourceProvider;
 import com.facebook.presto.spi.connector.ConnectorTransactionHandle;
 import com.google.inject.Inject;
-import io.airlift.log.Logger;
 import io.pixelsdb.pixels.cache.MemoryMappedFile;
 import io.pixelsdb.pixels.common.physical.Storage;
 import io.pixelsdb.pixels.common.physical.StorageFactory;
@@ -99,7 +99,8 @@ public class PixelsPageSourceProvider
     @Override
     public ConnectorPageSource createPageSource(ConnectorTransactionHandle transactionHandle,
                                                 ConnectorSession session, ConnectorSplit split,
-                                                List<ColumnHandle> columns)
+                                                ConnectorTableLayoutHandle layout,
+                                                List<ColumnHandle> columns, SplitContext splitContext)
     {
         List<PixelsColumnHandle> pixelsColumns = columns.stream()
                 .map(PixelsColumnHandle.class::cast).collect(toList());

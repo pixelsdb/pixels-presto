@@ -19,9 +19,10 @@
  */
 package io.pixelsdb.pixels.presto.block;
 
-import com.facebook.presto.spi.block.Block;
-import com.facebook.presto.spi.block.BlockBuilder;
+import com.facebook.presto.common.block.Block;
+import com.facebook.presto.common.block.BlockBuilder;
 import io.airlift.slice.Slice;
+import io.airlift.slice.SliceOutput;
 import io.airlift.slice.Slices;
 import io.airlift.slice.XxHash64;
 import org.openjdk.jol.info.ClassLayout;
@@ -30,8 +31,9 @@ import sun.misc.Unsafe;
 import java.lang.reflect.Field;
 import java.util.Arrays;
 import java.util.HashSet;
+import java.util.OptionalInt;
 import java.util.Set;
-import java.util.function.BiConsumer;
+import java.util.function.ObjLongConsumer;
 
 import static io.airlift.slice.SizeOf.sizeOf;
 import static sun.misc.Unsafe.ARRAY_BYTE_BASE_OFFSET;
@@ -222,6 +224,21 @@ public class VarcharArrayBlock implements Block
     }
 
     /**
+     * Returns the number of bytes (in terms of {@link Block#getSizeInBytes()}) required per position
+     * that this block contains, assuming that the number of bytes required is a known static quantity
+     * and not dependent on any particular specific position. This allows for some complex block wrappings
+     * to potentially avoid having to call {@link Block#getPositionsSizeInBytes(boolean[], int)}  which
+     * would require computing the specific positions selected
+     *
+     * @return The size in bytes, per position, if this block type does not require specific position information to compute its size
+     */
+    @Override
+    public OptionalInt fixedSizeInBytesPerPosition()
+    {
+        return null;
+    }
+
+    /**
      * Returns the size of of all positions marked true in the positions array.
      * This is equivalent to multiple calls of {@code block.getRegionSizeInBytes(position, length)}
      * where you mark all positions for the regions first.
@@ -229,15 +246,13 @@ public class VarcharArrayBlock implements Block
      * @param positions
      */
     @Override
-    public long getPositionsSizeInBytes(boolean[] positions)
+    public long getPositionsSizeInBytes(boolean[] positions, int usedPositionCount)
     {
         long sizeInBytes = 0;
-        int usedPositionCount = 0;
         for (int i = 0; i < positions.length; ++i)
         {
             if (positions[i])
             {
-                usedPositionCount++;
                 sizeInBytes += lengths[arrayOffset+i];
             }
         }
@@ -275,7 +290,7 @@ public class VarcharArrayBlock implements Block
      * must include the instance size of the current block
      */
     @Override
-    public void retainedBytesForEachPart(BiConsumer<Object, Long> consumer)
+    public void retainedBytesForEachPart(ObjLongConsumer<Object> consumer)
     {
         /**
          * PIXELS-167:
@@ -285,7 +300,7 @@ public class VarcharArrayBlock implements Block
         consumer.accept(offsets, sizeOf(offsets));
         consumer.accept(lengths, sizeOf(lengths));
         consumer.accept(valueIsNull, sizeOf(valueIsNull));
-        consumer.accept(this, (long) INSTANCE_SIZE);
+        consumer.accept(this, INSTANCE_SIZE);
     }
 
     /**
@@ -433,24 +448,24 @@ public class VarcharArrayBlock implements Block
     }
 
     @Override
-    public byte getByte(int position, int offset)
+    public byte getByte(int position)
     {
         checkReadablePosition(position);
-        return unsafe.getByte(getRawValue(position), address + getPositionOffset(position) + offset);
+        return unsafe.getByte(getRawValue(position), address + getPositionOffset(position));
     }
 
     @Override
-    public short getShort(int position, int offset)
+    public short getShort(int position)
     {
         checkReadablePosition(position);
-        return unsafe.getShort(getRawValue(position), address + getPositionOffset(position) + offset);
+        return unsafe.getShort(getRawValue(position), address + getPositionOffset(position));
     }
 
     @Override
-    public int getInt(int position, int offset)
+    public int getInt(int position)
     {
         checkReadablePosition(position);
-        return unsafe.getInt(getRawValue(position), address + getPositionOffset(position) + offset);
+        return unsafe.getInt(getRawValue(position), address + getPositionOffset(position));
     }
 
     @Override
@@ -535,6 +550,16 @@ public class VarcharArrayBlock implements Block
         return valueIsNull[position + arrayOffset];
     }
 
+    /**
+     * Returns a block that has an appended null at the end, no matter if the original block has null or not.
+     * The original block won't be modified.
+     */
+    @Override
+    public Block appendNull()
+    {
+        return null;
+    }
+
     protected void checkReadablePosition(int position)
     {
         BlockUtil.checkValidPosition(position, getPositionCount());
@@ -553,6 +578,18 @@ public class VarcharArrayBlock implements Block
         writeBytesTo(position, 0, getSliceLength(position), blockBuilder);
     }
 
+    /**
+     * Appends the value at {@code position} to {@code output}.
+     *
+     * @param position
+     * @param output
+     */
+    @Override
+    public void writePositionTo(int position, SliceOutput output)
+    {
+
+    }
+
     @Override
     public String toString()
     {
@@ -562,5 +599,24 @@ public class VarcharArrayBlock implements Block
         sb.append(", retainedSize=").append(retainedSizeInBytes);
         sb.append('}');
         return sb.toString();
+    }
+
+    /**
+     * @param internalPosition
+     * @return true if value at {@code internalPosition - getOffsetBase()} is null
+     */
+    @Override
+    public boolean isNullUnchecked(int internalPosition)
+    {
+        return false;
+    }
+
+    /**
+     * @return the internal offset of the underlying data structure of this block
+     */
+    @Override
+    public int getOffsetBase()
+    {
+        return 0;
     }
 }

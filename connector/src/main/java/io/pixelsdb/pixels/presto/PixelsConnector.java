@@ -19,12 +19,12 @@
  */
 package io.pixelsdb.pixels.presto;
 
+import com.facebook.airlift.bootstrap.LifeCycleManager;
+import com.facebook.airlift.log.Logger;
 import com.facebook.presto.spi.PrestoException;
 import com.facebook.presto.spi.connector.*;
 import com.facebook.presto.spi.session.PropertyMetadata;
 import com.facebook.presto.spi.transaction.IsolationLevel;
-import io.airlift.bootstrap.LifeCycleManager;
-import io.airlift.log.Logger;
 import io.pixelsdb.pixels.common.exception.TransException;
 import io.pixelsdb.pixels.common.transaction.QueryTransInfo;
 import io.pixelsdb.pixels.common.transaction.TransContext;
@@ -98,7 +98,7 @@ public class PixelsConnector
     }
 
     @Override
-    public void commit(ConnectorTransactionHandle transactionHandle)
+    public ConnectorCommitHandle commit(ConnectorTransactionHandle transactionHandle)
     {
         if (transactionHandle instanceof PixelsTransactionHandle)
         {
@@ -110,6 +110,7 @@ public class PixelsConnector
             throw new PrestoException(PixelsErrorCode.PIXELS_TRANS_HANDLE_TYPE_ERROR,
                     "The transaction handle is not an instance of PixelsTransactionHandle.");
         }
+        return new PixelsCommitHandle();
     }
 
     @Override
