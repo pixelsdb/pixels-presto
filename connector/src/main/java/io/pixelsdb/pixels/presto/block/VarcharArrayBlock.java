@@ -36,6 +36,8 @@ import java.util.Set;
 import java.util.function.ObjLongConsumer;
 
 import static io.airlift.slice.SizeOf.sizeOf;
+import static io.pixelsdb.pixels.presto.block.BlockUtil.copyIsNullAndAppendNull;
+import static io.pixelsdb.pixels.presto.block.BlockUtil.copyOffsetsAndAppendNull;
 import static sun.misc.Unsafe.ARRAY_BYTE_BASE_OFFSET;
 
 /**
@@ -235,7 +237,7 @@ public class VarcharArrayBlock implements Block
     @Override
     public OptionalInt fixedSizeInBytesPerPosition()
     {
-        return null;
+        return OptionalInt.empty(); // size varies per element and is not fixed
     }
 
     /**
@@ -557,7 +559,11 @@ public class VarcharArrayBlock implements Block
     @Override
     public Block appendNull()
     {
-        return null;
+        boolean[] newValueIsNull = copyIsNullAndAppendNull(valueIsNull, arrayOffset, positionCount);
+        int[] newOffsets = copyOffsetsAndAppendNull(offsets, arrayOffset, positionCount);
+        int[] newLengths = copyOffsetsAndAppendNull(lengths, arrayOffset, positionCount);
+
+        return new VarcharArrayBlock(arrayOffset, positionCount + 1, values, newOffsets, newLengths, newValueIsNull);
     }
 
     protected void checkReadablePosition(int position)
@@ -587,7 +593,8 @@ public class VarcharArrayBlock implements Block
     @Override
     public void writePositionTo(int position, SliceOutput output)
     {
-
+        checkReadablePosition(position);
+        output.writeBytes(getRawSlice(position), getPositionOffset(position), getSliceLength(position));
     }
 
     @Override
@@ -608,7 +615,7 @@ public class VarcharArrayBlock implements Block
     @Override
     public boolean isNullUnchecked(int internalPosition)
     {
-        return false;
+        return valueIsNull[internalPosition];
     }
 
     /**
@@ -617,6 +624,6 @@ public class VarcharArrayBlock implements Block
     @Override
     public int getOffsetBase()
     {
-        return 0;
+        return arrayOffset;
     }
 }

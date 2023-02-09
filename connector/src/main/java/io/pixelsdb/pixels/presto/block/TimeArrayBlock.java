@@ -50,6 +50,7 @@ import static io.pixelsdb.pixels.presto.block.BlockUtil.*;
 public class TimeArrayBlock implements Block
 {
     private static final int INSTANCE_SIZE = ClassLayout.parseClass(TimeArrayBlock.class).instanceSize();
+    public static final int SIZE_IN_BYTES_PER_POSITION = Integer.BYTES + Byte.BYTES;
 
     private final int arrayOffset;
     private final int positionCount;
@@ -113,7 +114,7 @@ public class TimeArrayBlock implements Block
     @Override
     public OptionalInt fixedSizeInBytesPerPosition()
     {
-        return null;
+        return OptionalInt.of(SIZE_IN_BYTES_PER_POSITION);
     }
 
     /**
@@ -218,7 +219,10 @@ public class TimeArrayBlock implements Block
     @Override
     public Block appendNull()
     {
-        return null;
+        boolean[] newValueIsNull = copyIsNullAndAppendNull(valueIsNull, arrayOffset, positionCount);
+        int[] newValues = ensureCapacity(values, arrayOffset + positionCount + 1);
+
+        return new TimeArrayBlock(arrayOffset, positionCount + 1, newValueIsNull, newValues);
     }
 
     @Override
@@ -237,7 +241,8 @@ public class TimeArrayBlock implements Block
     @Override
     public void writePositionTo(int position, SliceOutput output)
     {
-
+        checkReadablePosition(position);
+        output.writeInt(values[position + arrayOffset]);
     }
 
     @Override
@@ -318,7 +323,7 @@ public class TimeArrayBlock implements Block
     @Override
     public boolean isNullUnchecked(int internalPosition)
     {
-        return false;
+        return valueIsNull[internalPosition];
     }
 
     /**
@@ -327,6 +332,6 @@ public class TimeArrayBlock implements Block
     @Override
     public int getOffsetBase()
     {
-        return 0;
+        return arrayOffset;
     }
 }
