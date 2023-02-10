@@ -1,5 +1,5 @@
 /*
- * Copyright 2018 PixelsDB.
+ * Copyright 2023 PixelsDB.
  *
  * This file is part of Pixels.
  *
@@ -17,31 +17,14 @@
  * License along with Pixels.  If not, see
  * <https://www.gnu.org/licenses/>.
  */
-package io.pixelsdb.pixels.presto.exception;
+package io.pixelsdb.pixels.presto;
 
-import com.facebook.presto.common.ErrorCode;
-import com.facebook.presto.spi.ErrorCodeSupplier;
-import com.facebook.presto.common.ErrorType;
+import com.facebook.presto.spi.connector.ConnectorCommitHandle;
 
-import static com.facebook.presto.common.ErrorType.*;
-
-public enum ListenerErrorCode
-        implements ErrorCodeSupplier
+/**
+ * Created at: 2/9/23
+ * Author: hank
+ */
+public class PixelsCommitHandle implements ConnectorCommitHandle
 {
-    PIXELS_EVENT_LISTENER_ERROR(1, EXTERNAL),
-    PIXELS_EVENT_LISTENER_METRIC_ERROR(2, EXTERNAL)
-    /**/;
-
-    private final ErrorCode errorCode;
-
-    ListenerErrorCode(int code, ErrorType type)
-    {
-        errorCode = new ErrorCode(code + 0x0100_0000, name(), type);
-    }
-
-    @Override
-    public ErrorCode toErrorCode()
-    {
-        return errorCode;
-    }
 }

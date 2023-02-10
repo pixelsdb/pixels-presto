@@ -19,18 +19,18 @@
  */
 package io.pixelsdb.pixels.presto;
 
-import io.pixelsdb.pixels.common.utils.ConfigFactory;
-import io.pixelsdb.pixels.common.utils.DateUtil;
-import io.pixelsdb.pixels.common.utils.HttpUtil;
-import io.pixelsdb.pixels.presto.exception.ListenerException;
 import com.alibaba.fastjson.JSONObject;
 import com.alibaba.fastjson.parser.ParserConfig;
+import com.facebook.airlift.log.Logger;
 import com.facebook.presto.spi.PrestoException;
 import com.facebook.presto.spi.eventlistener.EventListener;
 import com.facebook.presto.spi.eventlistener.QueryCompletedEvent;
 import com.facebook.presto.spi.eventlistener.QueryCreatedEvent;
 import com.facebook.presto.spi.eventlistener.SplitCompletedEvent;
-import io.airlift.log.Logger;
+import io.pixelsdb.pixels.common.utils.ConfigFactory;
+import io.pixelsdb.pixels.common.utils.DateUtil;
+import io.pixelsdb.pixels.common.utils.HttpUtil;
+import io.pixelsdb.pixels.presto.exception.ListenerException;
 
 import java.io.BufferedWriter;
 import java.io.FileWriter;

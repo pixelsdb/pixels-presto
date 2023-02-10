@@ -19,9 +19,9 @@
  */
 package io.pixelsdb.pixels.presto.impl;
 
+import com.facebook.airlift.configuration.Config;
+import com.facebook.airlift.log.Logger;
 import com.facebook.presto.spi.PrestoException;
-import io.airlift.configuration.Config;
-import io.airlift.log.Logger;
 import io.pixelsdb.pixels.common.physical.Storage;
 import io.pixelsdb.pixels.common.utils.ConfigFactory;
 import io.pixelsdb.pixels.presto.exception.PixelsErrorCode;

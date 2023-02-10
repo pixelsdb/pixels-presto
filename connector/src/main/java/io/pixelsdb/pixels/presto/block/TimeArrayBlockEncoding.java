@@ -19,9 +19,9 @@
  */
 package io.pixelsdb.pixels.presto.block;
 
-import com.facebook.presto.spi.block.Block;
-import com.facebook.presto.spi.block.BlockEncoding;
-import com.facebook.presto.spi.block.BlockEncodingSerde;
+import com.facebook.presto.common.block.BlockEncoding;
+import com.facebook.presto.common.block.BlockEncodingSerde;
+import com.facebook.presto.common.block.Block;
 import io.airlift.slice.SliceInput;
 import io.airlift.slice.SliceOutput;
 
@@ -62,7 +62,7 @@ public class TimeArrayBlockEncoding
 
         for (int position = 0; position < positionCount; position++) {
             if (!block.isNull(position)) {
-                sliceOutput.writeInt(block.getInt(position, 0));
+                sliceOutput.writeInt(block.getInt(position));
             }
         }
     }

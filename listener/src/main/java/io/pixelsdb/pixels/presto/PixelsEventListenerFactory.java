@@ -19,9 +19,9 @@
  */
 package io.pixelsdb.pixels.presto;
 
+import com.facebook.airlift.log.Logger;
 import com.facebook.presto.spi.eventlistener.EventListener;
 import com.facebook.presto.spi.eventlistener.EventListenerFactory;
-import io.airlift.log.Logger;
 
 import java.util.Map;
 

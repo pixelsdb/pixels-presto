@@ -19,13 +19,16 @@
  */
 package io.pixelsdb.pixels.presto.block;
 
-import com.facebook.presto.spi.block.*;
+import com.facebook.presto.common.block.Block;
+import com.facebook.presto.common.block.BlockBuilder;
+import io.airlift.slice.SliceOutput;
 import org.openjdk.jol.info.ClassLayout;
 
-import java.util.function.BiConsumer;
+import java.util.OptionalInt;
+import java.util.function.ObjLongConsumer;
 
-import static io.pixelsdb.pixels.presto.block.BlockUtil.*;
 import static io.airlift.slice.SizeOf.sizeOf;
+import static io.pixelsdb.pixels.presto.block.BlockUtil.*;
 
 /**
  * This class is derived from com.facebook.presto.spi.block.IntArrayBlock.
@@ -47,6 +50,7 @@ import static io.airlift.slice.SizeOf.sizeOf;
 public class TimeArrayBlock implements Block
 {
     private static final int INSTANCE_SIZE = ClassLayout.parseClass(TimeArrayBlock.class).instanceSize();
+    public static final int SIZE_IN_BYTES_PER_POSITION = Integer.BYTES + Byte.BYTES;
 
     private final int arrayOffset;
     private final int positionCount;
@@ -99,23 +103,30 @@ public class TimeArrayBlock implements Block
     }
 
     /**
-     * Returns the size of of all positions marked true in the positions array.
+     * Returns the number of bytes (in terms of {@link Block#getSizeInBytes()}) required per position
+     * that this block contains, assuming that the number of bytes required is a known static quantity
+     * and not dependent on any particular specific position. This allows for some complex block wrappings
+     * to potentially avoid having to call {@link Block#getPositionsSizeInBytes(boolean[], int)}  which
+     * would require computing the specific positions selected
+     *
+     * @return The size in bytes, per position, if this block type does not require specific position information to compute its size
+     */
+    @Override
+    public OptionalInt fixedSizeInBytesPerPosition()
+    {
+        return OptionalInt.of(SIZE_IN_BYTES_PER_POSITION);
+    }
+
+    /**
+     * Returns the size of all positions marked true in the positions array.
      * This is equivalent to multiple calls of {@code block.getRegionSizeInBytes(position, length)}
      * where you mark all positions for the regions first.
      *
      * @param positions
      */
     @Override
-    public long getPositionsSizeInBytes(boolean[] positions)
+    public long getPositionsSizeInBytes(boolean[] positions, int usedPositionCount)
     {
-        int usedPositionCount = 0;
-        for (boolean marked : positions)
-        {
-            if (marked)
-            {
-                usedPositionCount++;
-            }
-        }
         return (Integer.BYTES + Byte.BYTES) * (long) usedPositionCount;
     }
 
@@ -138,11 +149,11 @@ public class TimeArrayBlock implements Block
     }
 
     @Override
-    public void retainedBytesForEachPart(BiConsumer<Object, Long> consumer)
+    public void retainedBytesForEachPart(ObjLongConsumer<Object> consumer)
     {
         consumer.accept(values, sizeOf(values));
         consumer.accept(valueIsNull, sizeOf(valueIsNull));
-        consumer.accept(this, (long) INSTANCE_SIZE);
+        consumer.accept(this, INSTANCE_SIZE);
     }
 
     @Override
@@ -162,25 +173,18 @@ public class TimeArrayBlock implements Block
     }
 
     @Override
-    public int getInt(int position, int offset)
+    public int getInt(int position)
     {
         checkReadablePosition(position);
-        if (offset != 0) {
-            throw new IllegalArgumentException("offset must be zero");
-        }
         return values[position + arrayOffset];
     }
 
     @Override
     @Deprecated
     // TODO: Remove when we fix intermediate types on aggregations.
-    public short getShort(int position, int offset)
+    public short getShort(int position)
     {
         checkReadablePosition(position);
-        if (offset != 0) {
-            throw new IllegalArgumentException("offset must be zero");
-        }
-
         short value = (short) (values[position + arrayOffset]);
         if (value != values[position + arrayOffset]) {
             throw new ArithmeticException("short overflow");
@@ -191,13 +195,9 @@ public class TimeArrayBlock implements Block
     @Override
     @Deprecated
     // TODO: Remove when we fix intermediate types on aggregations.
-    public byte getByte(int position, int offset)
+    public byte getByte(int position)
     {
         checkReadablePosition(position);
-        if (offset != 0) {
-            throw new IllegalArgumentException("offset must be zero");
-        }
-
         byte value = (byte) (values[position + arrayOffset]);
         if (value != values[position + arrayOffset]) {
             throw new ArithmeticException("byte overflow");
@@ -212,11 +212,37 @@ public class TimeArrayBlock implements Block
         return valueIsNull[position + arrayOffset];
     }
 
+    /**
+     * Returns a block that has an appended null at the end, no matter if the original block has null or not.
+     * The original block won't be modified.
+     */
+    @Override
+    public Block appendNull()
+    {
+        boolean[] newValueIsNull = copyIsNullAndAppendNull(valueIsNull, arrayOffset, positionCount);
+        int[] newValues = ensureCapacity(values, arrayOffset + positionCount + 1);
+
+        return new TimeArrayBlock(arrayOffset, positionCount + 1, newValueIsNull, newValues);
+    }
+
     @Override
     public void writePositionTo(int position, BlockBuilder blockBuilder)
     {
         checkReadablePosition(position);
         blockBuilder.writeInt(values[position + arrayOffset]);
+    }
+
+    /**
+     * Appends the value at {@code position} to {@code output}.
+     *
+     * @param position
+     * @param output
+     */
+    @Override
+    public void writePositionTo(int position, SliceOutput output)
+    {
+        checkReadablePosition(position);
+        output.writeInt(values[position + arrayOffset]);
     }
 
     @Override
@@ -288,5 +314,24 @@ public class TimeArrayBlock implements Block
         if (position < 0 || position >= getPositionCount()) {
             throw new IllegalArgumentException("position is not valid");
         }
+    }
+
+    /**
+     * @param internalPosition
+     * @return true if value at {@code internalPosition - getOffsetBase()} is null
+     */
+    @Override
+    public boolean isNullUnchecked(int internalPosition)
+    {
+        return valueIsNull[internalPosition];
+    }
+
+    /**
+     * @return the internal offset of the underlying data structure of this block
+     */
+    @Override
+    public int getOffsetBase()
+    {
+        return arrayOffset;
     }
 }

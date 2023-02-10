@@ -20,15 +20,15 @@
 package io.pixelsdb.pixels.presto;
 
 import com.alibaba.fastjson.JSON;
+import com.facebook.airlift.log.Logger;
+import com.facebook.presto.common.predicate.Marker;
+import com.facebook.presto.common.predicate.TupleDomain;
+import com.facebook.presto.common.type.StandardTypes;
+import com.facebook.presto.common.type.Type;
 import com.facebook.presto.spi.*;
 import com.facebook.presto.spi.connector.ConnectorSplitManager;
 import com.facebook.presto.spi.connector.ConnectorTransactionHandle;
-import com.facebook.presto.spi.predicate.Marker;
-import com.facebook.presto.spi.predicate.TupleDomain;
-import com.facebook.presto.spi.type.StandardTypes;
-import com.facebook.presto.spi.type.Type;
 import com.google.common.collect.ImmutableList;
-import io.airlift.log.Logger;
 import io.airlift.slice.Slice;
 import io.etcd.jetcd.KeyValue;
 import io.pixelsdb.pixels.common.exception.MetadataException;
@@ -99,7 +99,7 @@ public class PixelsSplitManager
     @Override
     public ConnectorSplitSource getSplits(ConnectorTransactionHandle handle, ConnectorSession session,
                                           ConnectorTableLayoutHandle tableLayout,
-                                          SplitSchedulingStrategy splitSchedulingStrategy)
+                                          SplitSchedulingContext splitSchedulingContext)
     {
         PixelsTransactionHandle transHandle = (PixelsTransactionHandle) handle;
         PixelsTableLayoutHandle layoutHandle = (PixelsTableLayoutHandle) tableLayout;

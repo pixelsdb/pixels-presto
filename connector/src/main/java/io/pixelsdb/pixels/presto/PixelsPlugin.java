@@ -20,7 +20,7 @@
 package io.pixelsdb.pixels.presto;
 
 import com.facebook.presto.spi.Plugin;
-import com.facebook.presto.spi.block.BlockEncoding;
+import com.facebook.presto.common.block.BlockEncoding;
 import com.facebook.presto.spi.connector.ConnectorFactory;
 import com.google.common.collect.ImmutableList;
 import io.pixelsdb.pixels.presto.block.TimeArrayBlockEncoding;
