@@ -169,6 +169,18 @@ public class PixelsSplit
     }
 
     @JsonProperty
+    public List<HostAddress> getAddresses()
+    {
+        return addresses;
+    }
+
+    @JsonProperty
+    public boolean getEnsureLocality()
+    {
+        return ensureLocality;
+    }
+
+    @JsonProperty
     public boolean getCached()
     {
         return cached;

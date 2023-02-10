@@ -176,7 +176,6 @@ class PixelsPageSource implements ConnectorPageSource
             this.option.predicate(predicate);
         }
 
-
         try
         {
             if (this.storage != null)
@@ -284,7 +283,7 @@ class PixelsPageSource implements ConnectorPageSource
         {
             return this.completedRows;
         }
-        return this.completedRows + (recordReader != null ? recordReader.getRowNumber() : 0);
+        return this.completedRows + (recordReader != null ? recordReader.getCompletedRows() : 0);
     }
 
     @Override
@@ -437,7 +436,7 @@ class PixelsPageSource implements ConnectorPageSource
             {
                 if (recordReader != null)
                 {
-                    this.completedRows += recordReader.getRowNumber();
+                    this.completedRows += recordReader.getCompletedRows();
                     this.completedBytes += recordReader.getCompletedBytes();
                     this.readTimeNanos += recordReader.getReadTimeNanos();
                     this.memoryUsage += recordReader.getMemoryUsage();
