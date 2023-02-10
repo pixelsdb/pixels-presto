@@ -2,14 +2,14 @@
 This is the Pixels integration for PrestoDB.
 
 ## Compatibility
-Pixels integration (connector & event listener) is currently compatible with Presto 0.215. Other Presto versions that are compatible
-with the Connector SPI in Presto 0.215 should also work well with Pixels.
+Pixels integration (connector & event listener) is currently compatible with Presto 0.279. Other Presto versions that are compatible
+with the Connector SPI in Presto 0.279 should also work well with Pixels.
 
 ## Build
 
 This project can be opened as a maven project in Intellij and built using maven.
 
-**Note** that Presto 0.215 requires Java 8, thus this project must be built by Jdk 8.
+**Note** that Presto 0.279 requires Java 8, thus this project must be built by JDK 8.
 
 However, [Pixels](https://github.com/pixelsdb/pixels) is the parent of this project, 
 therefore use `mvn install` to install Pixels modules into your local maven repository before building this project.
@@ -21,14 +21,13 @@ Ensure that Pixels and other prerequisites are installed following the instructi
 
 ### Install Presto
 
-Currently, Pixels is compatible with Presto-0.215.
-Download and install Presto-0.215 following the instructions [here](https://prestodb.io/docs/0.215/installation/deployment.html).
+Download and install Presto-0.279 following the instructions [here](https://prestodb.io/docs/0.279/installation/deployment.html).
 
-Here, we install Presto to `~/opt/presto-server-0.215` and create a link for it:
+Here, we install Presto to `~/opt/presto-server-0.279` and create a link for it:
 ```bash
-ln -s presto-server-0.215 presto-server
+ln -s presto-server-0.279 presto-server
 ```
-Then download [presto-cli](https://prestodb.io/docs/0.215/installation/cli.html) into `~/opt/presto-server/bin/`
+Then download [presto-cli](https://prestodb.io/docs/0.279/installation/cli.html) into `~/opt/presto-server/bin/`
 and give executable permission to it.
 Some scripts in Presto may require python:
 ```bash
@@ -49,7 +48,7 @@ pixels.config=/home/ubuntu/opt/pixels/pixels.properties
 lambda.enabled=false
 local.scan.concurrency=0
 clean.local.result=true
-output.scheme=output-scheme-dummy
+output.scheme=s3
 output.folder=output-folder-dummy
 output.endpoint=output-endpoint-dummy
 output.access.key=lambda
@@ -78,8 +77,8 @@ log.dir=/home/ubuntu/opt/pixels/listener/
 ```
 `log-dir` should point to an existing directory where the listener logs will appear.
 
-
 ### Run Queries
 
 Follow the instructions [here](https://github.com/pixelsdb/pixels#start-pixels) to start Pixels and use it in Presto.
+It is similar as using Pixels in Trino.
 Then you can [evaluate the queries in TPC-H](https://github.com/pixelsdb/pixels#tpc-h-evaluation).
