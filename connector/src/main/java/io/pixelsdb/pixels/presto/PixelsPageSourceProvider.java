@@ -117,7 +117,14 @@ public class PixelsPageSourceProvider
 
         try
         {
-            if (config.isLambdaEnabled() && this.localSplitCounter.get() >= config.getLocalScanConcurrency())
+            if (config.isLambdaEnabled() && this.localSplitCounter.get() >= config.getLocalScanConcurrency()
+                    /**
+                     * Issue #12:
+                     * If the number of columns to read is 0, the spits should not be processed by Lambda.
+                     * It usually means that the query is like select count(*) from table.
+                     * Such queries can be served on the metadata headers that are cached locally, without touching the data.
+                     */
+                    && includeCols.length > 0)
             {
                 boolean[] projection = new boolean[includeCols.length];
                 Arrays.fill(projection, true);
