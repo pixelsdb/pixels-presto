@@ -22,11 +22,12 @@ package io.pixelsdb.pixels.presto.impl;
 import com.facebook.airlift.log.Logger;
 import com.facebook.presto.common.type.Type;
 import com.facebook.presto.spi.PrestoException;
+import com.google.common.collect.ImmutableList;
 import com.google.inject.Inject;
 import io.pixelsdb.pixels.common.exception.MetadataException;
 import io.pixelsdb.pixels.common.metadata.MetadataCache;
-import io.pixelsdb.pixels.common.metadata.SchemaTableName;
 import io.pixelsdb.pixels.common.metadata.MetadataService;
+import io.pixelsdb.pixels.common.metadata.SchemaTableName;
 import io.pixelsdb.pixels.common.metadata.domain.*;
 import io.pixelsdb.pixels.common.utils.ConfigFactory;
 import io.pixelsdb.pixels.core.TypeDescription;
@@ -113,8 +114,10 @@ public class PixelsMetadataProxy
 
     public List<PixelsColumnHandle> getTableColumn(String connectorId, String schemaName, String tableName) throws MetadataException
     {
-        List<PixelsColumnHandle> columns = new ArrayList<PixelsColumnHandle>();
-        List<Column> columnsList = metadataService.getColumns(schemaName, tableName, false);
+        ImmutableList.Builder<PixelsColumnHandle> columnsBuilder = ImmutableList.builder();
+        List<Column> columnsList = metadataService.getColumns(schemaName, tableName, true);
+        SchemaTableName schemaTableName = new SchemaTableName(schemaName, tableName);
+        this.metadataCache.cacheTableColumns(schemaTableName, columnsList);
         for (int i = 0; i < columnsList.size(); i++) {
             Column c = columnsList.get(i);
             Type prestoType = typeParser.parsePrestoType(c.getType());
@@ -127,9 +130,9 @@ public class PixelsMetadataProxy
             String name = c.getName();
             PixelsColumnHandle pixelsColumnHandle = new PixelsColumnHandle(connectorId, name,
                     prestoType, pixelsType.getCategory(), "", i);
-            columns.add(pixelsColumnHandle);
+            columnsBuilder.add(pixelsColumnHandle);
         }
-        return columns;
+        return columnsBuilder.build();
     }
 
     public List<Column> getColumnStatistics(String schemaName, String tableName)

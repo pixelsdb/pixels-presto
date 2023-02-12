@@ -184,7 +184,6 @@ public class PixelsMetadata
                                               Optional<ConnectorTableLayoutHandle> tableLayoutHandle,
                                               List<ColumnHandle> columnHandles, Constraint<ColumnHandle> constraint)
     {
-        //return ConnectorMetadata.super.getTableStatistics(session, tableHandle, tableLayoutHandle, columnHandles, constraint);
         TableStatistics.Builder tableStatBuilder = TableStatistics.builder();
         PixelsTableHandle tableHandle = (PixelsTableHandle) table;
         List<PixelsColumnHandle> pixelsColumns = columnHandles.stream()
@@ -201,7 +200,7 @@ public class PixelsMetadata
         {
             long rowCount = metadataProxy.getTable(tableHandle.getSchemaName(), tableHandle.getTableName()).getRowCount();
             tableStatBuilder.setRowCount(Estimate.of(rowCount));
-            logger.debug("table '" + tableHandle.getTableName() + "' row count: " + rowCount);
+            logger.debug("table '" + tableHandle.getTableName() + "' row count: " + rowCount + ", column handle count: " + columnHandles.size());
         } catch (MetadataException e)
         {
             logger.error(e, "failed to get table from metadata service");
@@ -218,7 +217,7 @@ public class PixelsMetadata
             try
             {
                 TypeDescription pixelsType = metadataProxy.parsePixelsType(columnHandle.getColumnType());
-                ByteBuffer statsBytes = column.getRecordStats();
+                ByteBuffer statsBytes = column.getRecordStats().slice();
                 if (statsBytes != null && statsBytes.remaining() > 0)
                 {
                     PixelsProto.ColumnStatistic columnStatsPb = PixelsProto.ColumnStatistic.parseFrom(statsBytes);
