@@ -200,7 +200,7 @@ public class PixelsMetadata
         {
             long rowCount = metadataProxy.getTable(tableHandle.getSchemaName(), tableHandle.getTableName()).getRowCount();
             tableStatBuilder.setRowCount(Estimate.of(rowCount));
-            logger.debug("table '" + tableHandle.getTableName() + "' row count: " + rowCount + ", column handle count: " + columnHandles.size());
+            logger.debug("table '" + tableHandle.getTableName() + "' row count: " + rowCount);
         } catch (MetadataException e)
         {
             logger.error(e, "failed to get table from metadata service");
