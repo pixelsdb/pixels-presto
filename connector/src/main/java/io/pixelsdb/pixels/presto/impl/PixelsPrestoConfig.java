@@ -23,6 +23,7 @@ import com.facebook.airlift.configuration.Config;
 import com.facebook.airlift.log.Logger;
 import com.facebook.presto.spi.PrestoException;
 import io.pixelsdb.pixels.common.physical.Storage;
+import io.pixelsdb.pixels.common.physical.StorageFactory;
 import io.pixelsdb.pixels.common.utils.ConfigFactory;
 import io.pixelsdb.pixels.presto.exception.PixelsErrorCode;
 
@@ -104,7 +105,7 @@ public class PixelsPrestoConfig
             {
                 throw new PrestoException(PixelsErrorCode.PIXELS_CONFIG_ERROR, e);
             }
-            //try
+            try
             {
                 /**
                  * PIXELS-108:
@@ -116,10 +117,14 @@ public class PixelsPrestoConfig
                  *
                  * I currently don't know the reason (08.27.2021).
                  */
-                //StorageFactory.Instance().reload();
-            } //catch (IOException e)
+                if (StorageFactory.Instance().isEnabled(Storage.Scheme.hdfs))
+                {
+                    // PIXELS-385: only reload HDFS if it is enabled.
+                    StorageFactory.Instance().reload(Storage.Scheme.hdfs);
+                }
+            } catch (IOException e)
             {
-                //throw new PrestoException(PixelsErrorCode.PIXELS_STORAGE_ERROR, e);
+                throw new PrestoException(PixelsErrorCode.PIXELS_STORAGE_ERROR, e);
             }
         }
         return this;
