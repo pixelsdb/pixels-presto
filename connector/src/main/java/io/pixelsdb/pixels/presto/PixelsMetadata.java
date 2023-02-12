@@ -19,21 +19,48 @@
  */
 package io.pixelsdb.pixels.presto;
 
+import com.facebook.airlift.log.Logger;
+import com.facebook.presto.spi.statistics.DoubleRange;
+import com.facebook.presto.common.type.DecimalType;
+import com.facebook.presto.common.type.TimestampType;
+import com.facebook.presto.common.type.TimestampWithTimeZoneType;
+import com.facebook.presto.common.type.Type;
 import com.facebook.presto.spi.*;
 import com.facebook.presto.spi.connector.ConnectorMetadata;
+import com.facebook.presto.spi.statistics.ColumnStatistics;
+import com.facebook.presto.spi.statistics.Estimate;
+import com.facebook.presto.spi.statistics.TableStatistics;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.protobuf.InvalidProtocolBufferException;
 import io.pixelsdb.pixels.common.exception.MetadataException;
 import io.pixelsdb.pixels.common.metadata.domain.Column;
 import io.pixelsdb.pixels.common.metadata.domain.View;
 import io.pixelsdb.pixels.common.physical.Storage;
+import io.pixelsdb.pixels.core.PixelsProto;
+import io.pixelsdb.pixels.core.TypeDescription;
+import io.pixelsdb.pixels.core.stats.RangeStats;
+import io.pixelsdb.pixels.core.stats.StatsRecorder;
 import io.pixelsdb.pixels.presto.exception.PixelsErrorCode;
 import io.pixelsdb.pixels.presto.impl.PixelsMetadataProxy;
 
 import javax.inject.Inject;
+import java.nio.ByteBuffer;
 import java.util.*;
 
+import static com.facebook.presto.common.type.BigintType.BIGINT;
+import static com.facebook.presto.common.type.BooleanType.BOOLEAN;
+import static com.facebook.presto.common.type.DateTimeEncoding.unpackMillisUtc;
+import static com.facebook.presto.common.type.DateType.DATE;
+import static com.facebook.presto.common.type.Decimals.longTenToNth;
+import static com.facebook.presto.common.type.DoubleType.DOUBLE;
+import static com.facebook.presto.common.type.IntegerType.INTEGER;
+import static com.facebook.presto.common.type.RealType.REAL;
+import static com.facebook.presto.common.type.SmallintType.SMALLINT;
+import static com.facebook.presto.common.type.TinyintType.TINYINT;
 import static com.google.common.base.Preconditions.checkArgument;
+import static java.lang.Float.intBitsToFloat;
+import static java.lang.Math.toIntExact;
 import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.toList;
 
@@ -45,16 +72,17 @@ import static java.util.stream.Collectors.toList;
 public class PixelsMetadata
         implements ConnectorMetadata
 {
+    private static final Logger logger = Logger.get(PixelsMetadata.class);
     // private static final Logger logger = Logger.get(PixelsMetadata.class);
     private final String connectorId;
 
-    private final PixelsMetadataProxy pixelsMetadataProxy;
+    private final PixelsMetadataProxy metadataProxy;
 
     @Inject
-    public PixelsMetadata(PixelsConnectorId connectorId, PixelsMetadataProxy pixelsMetadataProxy)
+    public PixelsMetadata(PixelsConnectorId connectorId, PixelsMetadataProxy metadataProxy)
     {
         this.connectorId = requireNonNull(connectorId, "connectorId is null").toString();
-        this.pixelsMetadataProxy = requireNonNull(pixelsMetadataProxy, "pixelsMetadataProxy is null");
+        this.metadataProxy = requireNonNull(metadataProxy, "metadataProxy is null");
     }
 
     @Override
@@ -62,7 +90,7 @@ public class PixelsMetadata
     {
         try
         {
-            return this.pixelsMetadataProxy.existSchema(schemaName);
+            return this.metadataProxy.existSchema(schemaName);
         } catch (MetadataException e)
         {
             throw new PrestoException(PixelsErrorCode.PIXELS_METASTORE_ERROR, e);
@@ -80,7 +108,7 @@ public class PixelsMetadata
         List<String> schemaNameList = null;
         try
         {
-            schemaNameList = pixelsMetadataProxy.getSchemaNames();
+            schemaNameList = metadataProxy.getSchemaNames();
         } catch (MetadataException e)
         {
             throw new PrestoException(PixelsErrorCode.PIXELS_METASTORE_ERROR, e);
@@ -94,7 +122,7 @@ public class PixelsMetadata
         requireNonNull(tableName, "tableName is null");
         try
         {
-            if (this.pixelsMetadataProxy.existTable(tableName.getSchemaName(), tableName.getTableName()))
+            if (this.metadataProxy.existTable(tableName.getSchemaName(), tableName.getTableName()))
             {
                 PixelsTableHandle tableHandle = new PixelsTableHandle(
                         connectorId, tableName.getSchemaName(), tableName.getTableName(), "");
@@ -141,7 +169,7 @@ public class PixelsMetadata
         List<PixelsColumnHandle> columnHandleList;
         try
         {
-            columnHandleList = pixelsMetadataProxy.getTableColumn(connectorId, schemaName, tableName);
+            columnHandleList = metadataProxy.getTableColumn(connectorId, schemaName, tableName);
         } catch (MetadataException e)
         {
             throw new PrestoException(PixelsErrorCode.PIXELS_METASTORE_ERROR, e);
@@ -149,6 +177,138 @@ public class PixelsMetadata
         List<ColumnMetadata> columns = columnHandleList.stream().map(PixelsColumnHandle::getColumnMetadata)
                 .collect(toList());
         return new ConnectorTableMetadata(new SchemaTableName(schemaName, tableName), columns);
+    }
+
+    @Override
+    public TableStatistics getTableStatistics(ConnectorSession session, ConnectorTableHandle table,
+                                              Optional<ConnectorTableLayoutHandle> tableLayoutHandle,
+                                              List<ColumnHandle> columnHandles, Constraint<ColumnHandle> constraint)
+    {
+        TableStatistics.Builder tableStatBuilder = TableStatistics.builder();
+        PixelsTableHandle tableHandle = (PixelsTableHandle) table;
+        List<PixelsColumnHandle> pixelsColumns = columnHandles.stream()
+                .map(PixelsColumnHandle.class::cast).collect(toList());
+        List<Column> columns = metadataProxy.getColumnStatistics(tableHandle.getSchemaName(), tableHandle.getTableName());
+        requireNonNull(columns, "columns is null");
+        Map<String, Column> columnMap = new HashMap<>(columns.size());
+        for (Column column : columns)
+        {
+            columnMap.put(column.getName(), column);
+        }
+
+        try
+        {
+            long rowCount = metadataProxy.getTable(tableHandle.getSchemaName(), tableHandle.getTableName()).getRowCount();
+            tableStatBuilder.setRowCount(Estimate.of(rowCount));
+            logger.debug("table '" + tableHandle.getTableName() + "' row count: " + rowCount + ", column handle count: " + columnHandles.size());
+        } catch (MetadataException e)
+        {
+            logger.error(e, "failed to get table from metadata service");
+            throw new PrestoException(PixelsErrorCode.PIXELS_METASTORE_ERROR, e);
+        }
+
+        for (PixelsColumnHandle columnHandle : pixelsColumns)
+        {
+            ColumnStatistics.Builder columnStatsBuilder = ColumnStatistics.builder();
+            Column column = columnMap.get(columnHandle.getColumnName());
+            columnStatsBuilder.setDataSize(Estimate.of(column.getSize()));
+            columnStatsBuilder.setNullsFraction(Estimate.of(column.getNullFraction()));
+            columnStatsBuilder.setDistinctValuesCount(Estimate.of(column.getCardinality()));
+            try
+            {
+                TypeDescription pixelsType = metadataProxy.parsePixelsType(columnHandle.getColumnType());
+                ByteBuffer statsBytes = column.getRecordStats().slice();
+                if (statsBytes != null && statsBytes.remaining() > 0)
+                {
+                    PixelsProto.ColumnStatistic columnStatsPb = PixelsProto.ColumnStatistic.parseFrom(statsBytes);
+                    StatsRecorder statsRecorder = StatsRecorder.create(pixelsType, columnStatsPb);
+                    if (statsRecorder instanceof RangeStats)
+                    {
+                        /**
+                         * When needed, we can also get a general range stats like this:
+                         * GeneralRangeStats rangeStats = StatsRecorder.toGeneral(pixelsType, (RangeStats<?>) statsRecorder);
+                         * The double min/max in general range stats is the readable representation of the min/max value.
+                         */
+                        RangeStats<?> rangeStats = (RangeStats<?>) statsRecorder;
+                        logger.debug(column.getName() + " column range: {min:" + rangeStats.getMinimum() + ", max:" +
+                                rangeStats.getMaximum() + ", hasMin:" + rangeStats.hasMinimum() +
+                                ", hasMax:" + rangeStats.hasMaximum() + "}");
+                        Type columnType = columnHandle.getColumnType();
+                        OptionalDouble min = statValueToDouble(columnType, rangeStats.getMinimum());
+                        OptionalDouble max = statValueToDouble(columnType, rangeStats.getMaximum());
+                        if (min.isPresent() && max.isPresent())
+                        {
+                            columnStatsBuilder.setRange(new DoubleRange(min.getAsDouble(), max.getAsDouble()));
+                        }
+                    }
+                }
+            } catch (InvalidProtocolBufferException e)
+            {
+                logger.error(e, "failed to parse record statistics from protobuf object");
+            }
+            tableStatBuilder.setColumnStatistics(columnHandle, columnStatsBuilder.build());
+        }
+
+        return tableStatBuilder.build();
+    }
+
+    /**
+     * Convert the min / max value of ColumnStats to double value.
+     * This method refers to {@code io.trino.spi.statistics.StatsUtil.toStatsRepresentation(Type type, Object value)}.
+     * @param type the column type.
+     * @param value the min / max value of ColumnStats.
+     * @return the double value, may be empty if the conversion is not supported.
+     */
+    private static OptionalDouble statValueToDouble(Type type, Object value)
+    {
+        requireNonNull(type, "type is null");
+        requireNonNull(value, "value is null");
+
+        if (type == BOOLEAN)
+        {
+            return OptionalDouble.of((boolean) value ? 1 : 0);
+        }
+        if (type == TINYINT || type == SMALLINT || type == INTEGER || type == BIGINT)
+        {
+            return OptionalDouble.of((long) value);
+        }
+        if (type == REAL)
+        {
+            return OptionalDouble.of(intBitsToFloat(toIntExact((Long) value)));
+        }
+        if (type == DOUBLE)
+        {
+            return OptionalDouble.of((double) value);
+        }
+        if (type instanceof DecimalType)
+        {
+            DecimalType decimalType = (DecimalType) type;
+            if (decimalType.isShort())
+            {
+                return OptionalDouble.of(shortDecimalToDouble((long) value, longTenToNth(decimalType.getScale())));
+            }
+            // Issue #24: we currently do not support get column statistics for long decimal columns.
+            return OptionalDouble.empty();
+        }
+        if (type == DATE)
+        {
+            return OptionalDouble.of((long) value);
+        }
+        if (type instanceof TimestampType)
+        {
+            return OptionalDouble.of((long) value);
+        }
+        if (type instanceof TimestampWithTimeZoneType)
+        {
+            return OptionalDouble.of(unpackMillisUtc((long) value));
+        }
+
+        return OptionalDouble.empty();
+    }
+
+    private static double shortDecimalToDouble(long decimal, long tenToScale)
+    {
+        return ((double) decimal) / tenToScale;
     }
 
     @Override
@@ -162,7 +322,7 @@ public class PixelsMetadata
                 schemaNames = ImmutableList.of(schemaName.get());
             } else
             {
-                schemaNames = pixelsMetadataProxy.getSchemaNames();
+                schemaNames = metadataProxy.getSchemaNames();
             }
 
             ImmutableList.Builder<SchemaTableName> builder = ImmutableList.builder();
@@ -176,9 +336,9 @@ public class PixelsMetadata
                  * we should return an empty list without throwing an exception.
                  * Presto will add the system tables by itself.
                  */
-                if (pixelsMetadataProxy.existSchema(schema))
+                if (metadataProxy.existSchema(schema))
                 {
-                    for (String table : pixelsMetadataProxy.getTableNames(schema))
+                    for (String table : metadataProxy.getTableNames(schema))
                     {
                         builder.add(new SchemaTableName(schema, table));
                     }
@@ -201,7 +361,7 @@ public class PixelsMetadata
         List<PixelsColumnHandle> columnHandleList = null;
         try
         {
-            columnHandleList = pixelsMetadataProxy.getTableColumn(
+            columnHandleList = metadataProxy.getTableColumn(
                     connectorId, pixelsTableHandle.getSchemaName(), pixelsTableHandle.getTableName());
         } catch (MetadataException e)
         {
@@ -236,7 +396,7 @@ public class PixelsMetadata
                  * Return an empty result if the table does not exist.
                  * This is possible when reading the content of information_schema tables.
                  */
-                if (pixelsMetadataProxy.existTable(tableName.getSchemaName(), tableName.getTableName()))
+                if (metadataProxy.existTable(tableName.getSchemaName(), tableName.getTableName()))
                 {
                     ConnectorTableMetadata tableMetadata = getTableMetadataInternal(
                             tableName.getSchemaName(), tableName.getTableName());
@@ -288,7 +448,7 @@ public class PixelsMetadata
         }
         try
         {
-            boolean res = this.pixelsMetadataProxy.createTable(schemaName, tableName, storageScheme, columns);
+            boolean res = this.metadataProxy.createTable(schemaName, tableName, storageScheme, columns);
             if (res == false && ignoreExisting == false)
             {
                 throw  new PrestoException(PixelsErrorCode.PIXELS_SQL_EXECUTE_ERROR,
@@ -309,7 +469,7 @@ public class PixelsMetadata
 
         try
         {
-            boolean res = this.pixelsMetadataProxy.dropTable(schemaName, tableName);
+            boolean res = this.metadataProxy.dropTable(schemaName, tableName);
             if (res == false)
             {
                 throw  new PrestoException(PixelsErrorCode.PIXELS_SQL_EXECUTE_ERROR,
@@ -326,7 +486,7 @@ public class PixelsMetadata
     {
         try
         {
-            boolean res = this.pixelsMetadataProxy.createSchema(schemaName);
+            boolean res = this.metadataProxy.createSchema(schemaName);
             if (res == false)
             {
                 throw  new PrestoException(PixelsErrorCode.PIXELS_SQL_EXECUTE_ERROR,
@@ -343,7 +503,7 @@ public class PixelsMetadata
     {
         try
         {
-            boolean res = this.pixelsMetadataProxy.dropSchema(schemaName);
+            boolean res = this.metadataProxy.dropSchema(schemaName);
             if (res == false)
             {
                 throw  new PrestoException(PixelsErrorCode.PIXELS_SQL_EXECUTE_ERROR,
@@ -361,7 +521,7 @@ public class PixelsMetadata
         try
         {
             SchemaTableName viewName = viewMetadata.getTable();
-            boolean res = this.pixelsMetadataProxy.createView(viewName.getSchemaName(), viewName.getTableName(), viewData);
+            boolean res = this.metadataProxy.createView(viewName.getSchemaName(), viewName.getTableName(), viewData);
             if (res == false)
             {
                 throw  new PrestoException(PixelsErrorCode.PIXELS_SQL_EXECUTE_ERROR,
@@ -378,7 +538,7 @@ public class PixelsMetadata
     {
         try
         {
-            boolean res = this.pixelsMetadataProxy.dropView(viewName.getSchemaName(), viewName.getTableName());
+            boolean res = this.metadataProxy.dropView(viewName.getSchemaName(), viewName.getTableName());
             if (res == false)
             {
                 throw  new PrestoException(PixelsErrorCode.PIXELS_SQL_EXECUTE_ERROR,
@@ -401,7 +561,7 @@ public class PixelsMetadata
                 schemaNames = ImmutableList.of(schemaName.get());
             } else
             {
-                schemaNames = pixelsMetadataProxy.getSchemaNames();
+                schemaNames = metadataProxy.getSchemaNames();
             }
 
             ImmutableList.Builder<SchemaTableName> builder = ImmutableList.builder();
@@ -415,9 +575,9 @@ public class PixelsMetadata
                  * we should return an empty list without throwing an exception.
                  * Presto will add the system tables by itself.
                  */
-                if (pixelsMetadataProxy.existSchema(schema))
+                if (metadataProxy.existSchema(schema))
                 {
-                    for (String table : pixelsMetadataProxy.getViewNames(schema))
+                    for (String table : metadataProxy.getViewNames(schema))
                     {
                         builder.add(new SchemaTableName(schema, table));
                     }
@@ -437,7 +597,7 @@ public class PixelsMetadata
         try
         {
             String schemaName = prefix.getSchemaName();
-            if (this.pixelsMetadataProxy.existSchema(schemaName))
+            if (this.metadataProxy.existSchema(schemaName))
             {
                 /**
                  * PIXELS-194:
@@ -445,7 +605,7 @@ public class PixelsMetadata
                  * Otherwise, return an empty set, which is required by Presto
                  * when reading the content of information_schema tables.
                  */
-                List<View> views = this.pixelsMetadataProxy.getViews(schemaName);
+                List<View> views = this.metadataProxy.getViews(schemaName);
                 for (View view : views)
                 {
                     SchemaTableName stName = new SchemaTableName(schemaName, view.getName());
