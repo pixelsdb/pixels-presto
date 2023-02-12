@@ -24,6 +24,8 @@ import com.facebook.presto.common.type.Type;
 import com.facebook.presto.spi.PrestoException;
 import com.google.inject.Inject;
 import io.pixelsdb.pixels.common.exception.MetadataException;
+import io.pixelsdb.pixels.common.metadata.MetadataCache;
+import io.pixelsdb.pixels.common.metadata.SchemaTableName;
 import io.pixelsdb.pixels.common.metadata.MetadataService;
 import io.pixelsdb.pixels.common.metadata.domain.*;
 import io.pixelsdb.pixels.common.utils.ConfigFactory;
@@ -45,6 +47,7 @@ public class PixelsMetadataProxy
     private static final Logger log = Logger.get(PixelsMetadataProxy.class);
     private final MetadataService metadataService;
     private final PixelsTypeParser typeParser;
+    private final MetadataCache metadataCache = MetadataCache.Instance();
 
     @Inject
     public PixelsMetadataProxy(PixelsPrestoConfig config, PixelsTypeParser typeParser)
@@ -103,6 +106,11 @@ public class PixelsMetadataProxy
         return metadataService.getTable(schemaName, tableName);
     }
 
+    public TypeDescription parsePixelsType(Type type)
+    {
+        return typeParser.parsePixelsType(type.getDisplayName());
+    }
+
     public List<PixelsColumnHandle> getTableColumn(String connectorId, String schemaName, String tableName) throws MetadataException
     {
         List<PixelsColumnHandle> columns = new ArrayList<PixelsColumnHandle>();
@@ -122,6 +130,11 @@ public class PixelsMetadataProxy
             columns.add(pixelsColumnHandle);
         }
         return columns;
+    }
+
+    public List<Column> getColumnStatistics(String schemaName, String tableName)
+    {
+        return this.metadataCache.getTableColumns(new SchemaTableName(schemaName, tableName));
     }
 
     public List<Layout> getDataLayouts (String schemaName, String tableName) throws MetadataException
