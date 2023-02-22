@@ -22,8 +22,8 @@ package io.pixelsdb.pixels.presto;
 import com.facebook.presto.common.type.Type;
 import com.facebook.presto.spi.RecordCursor;
 import com.facebook.presto.spi.RecordSet;
-import io.pixelsdb.pixels.cache.MemoryMappedFile;
 import io.pixelsdb.pixels.common.physical.Storage;
+import io.pixelsdb.pixels.common.physical.natives.MemoryMappedFile;
 import io.pixelsdb.pixels.core.PixelsFooterCache;
 
 import java.util.ArrayList;
