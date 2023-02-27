@@ -365,7 +365,7 @@ class PixelsPageSource implements ConnectorPageSource
                         return getNextPage();
                     } else
                     {
-                        close();
+                        this.close();
                         return null;
                     }
                 }
@@ -396,7 +396,7 @@ class PixelsPageSource implements ConnectorPageSource
                         return getNextPage();
                     } else
                     {
-                        close();
+                        this.close();
                         return null;
                     }
                 }
@@ -413,6 +413,7 @@ class PixelsPageSource implements ConnectorPageSource
     @Override
     public void close()
     {
+        // PIXELS-403: page source is not accessed by multiple threads, there is no need to synchronize on this method.
         if (closed)
         {
             return;
@@ -428,6 +429,9 @@ class PixelsPageSource implements ConnectorPageSource
         closed = true;
     }
 
+    /**
+     * Close the current pixels reader without closing this page source.
+     */
     private void closeReader()
     {
         try
