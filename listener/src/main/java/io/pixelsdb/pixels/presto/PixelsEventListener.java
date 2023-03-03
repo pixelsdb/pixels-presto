@@ -62,9 +62,9 @@ public class PixelsEventListener implements EventListener
          * PIXELS-87:
          * Get the gc threshold here.
          */
-        String thresholdStr = ConfigFactory.Instance().getProperty("pixels.gc.threshold");
+        String thresholdStr = ConfigFactory.Instance().getProperty("experimental.gc.threshold");
         GCThreshold = Double.parseDouble(thresholdStr);
-        logger.info("Using pixels.gc.threshold (" + GCThreshold + ")...");
+        logger.info("Using experimental.gc.threshold (" + GCThreshold + ")...");
     }
 
     public PixelsEventListener (String logDir, boolean enabled,
