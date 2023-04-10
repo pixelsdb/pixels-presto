@@ -28,7 +28,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableList;
 import io.pixelsdb.pixels.common.physical.Storage;
-import io.pixelsdb.pixels.executor.lambda.output.ScanOutput;
+import io.pixelsdb.pixels.planner.plan.physical.output.ScanOutput;
 
 import java.util.Collections;
 import java.util.List;
