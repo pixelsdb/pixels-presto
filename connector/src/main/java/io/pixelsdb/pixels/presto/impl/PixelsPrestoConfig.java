@@ -24,6 +24,7 @@ import com.facebook.airlift.log.Logger;
 import com.facebook.presto.spi.PrestoException;
 import io.pixelsdb.pixels.common.physical.Storage;
 import io.pixelsdb.pixels.common.physical.StorageFactory;
+import io.pixelsdb.pixels.common.turbo.InvokerFactory;
 import io.pixelsdb.pixels.common.utils.ConfigFactory;
 import io.pixelsdb.pixels.presto.exception.PixelsErrorCode;
 
@@ -140,6 +141,16 @@ public class PixelsPrestoConfig
     public PixelsPrestoConfig setLambdaEnabled(boolean enabled)
     {
         this.lambdaEnabled = enabled;
+        if (this.lambdaEnabled)
+        {
+            /**
+             * PIXELS-416:
+             * We must load the invoker providers here. The split manager and the page source
+             * provider are running in working threads and can not load the invoker providers
+             * successfully. The detailed reason is to be analyzed.
+             */
+            InvokerFactory.Instance();
+        }
         return this;
     }
 
