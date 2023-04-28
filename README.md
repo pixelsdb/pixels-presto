@@ -17,11 +17,12 @@ therefore use `mvn install` to install Pixels modules into your local maven repo
 ## Use Pixels in Presto
 
 Ensure that Pixels and other prerequisites are installed following the instructions
-[here](https://github.com/pixelsdb/pixels#installation-in-aws).
+[HERE](https://github.com/pixelsdb/pixels/blob/master/docs/INSTALL.md).
+Instead of installing Trino as the query engine, here we install Presto.
 
 ### Install Presto
 
-Download and install Presto-0.279 following the instructions [here](https://prestodb.io/docs/0.279/installation/deployment.html).
+Download and install Presto-0.279 following the instructions in [Presto Docs](https://prestodb.io/docs/0.279/installation/deployment.html).
 
 Here, we install Presto to `~/opt/presto-server-0.279` and create a link for it:
 ```bash
@@ -79,6 +80,6 @@ log.dir=/home/ubuntu/opt/pixels/listener/
 
 ### Run Queries
 
-Follow the instructions [here](https://github.com/pixelsdb/pixels#start-pixels) to start Pixels and use it in Presto.
-It is similar as using Pixels in Trino.
-Then you can [evaluate the queries in TPC-H](https://github.com/pixelsdb/pixels#tpc-h-evaluation).
+Start Pixels + Presto in the same way as [Starting Pixels + Trino](https://github.com/pixelsdb/pixels/blob/master/docs/INSTALL.md).
+The usage is also quite similar as the usage of Pixels + Trino.
+Then, you can test the query performance following [TPC-H Evaluation](https://github.com/pixelsdb/pixels/blob/master/docs/TPC-H.md).
