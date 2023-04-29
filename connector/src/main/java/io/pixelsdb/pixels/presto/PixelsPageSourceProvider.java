@@ -128,15 +128,16 @@ public class PixelsPageSourceProvider
             {
                 boolean[] projection = new boolean[includeCols.length];
                 Arrays.fill(projection, true);
-                if (config.getOutputScheme() == Storage.Scheme.minio)
+                StorageInfo storageInfo = config.getOutputStorageInfo();
+                if (storageInfo.getScheme() == Storage.Scheme.minio)
                 {
-                    Minio.ConfigMinio(config.getOutputEndpoint(), config.getOutputAccessKey(), config.getOutputSecretKey());
+                    Minio.ConfigMinio(storageInfo.getEndpoint(), storageInfo.getAccessKey(), storageInfo.getSecretKey());
                 }
-                else if (config.getOutputScheme() == Storage.Scheme.redis)
+                else if (storageInfo.getScheme() == Storage.Scheme.redis)
                 {
-                    Redis.ConfigRedis(config.getOutputEndpoint(), config.getOutputAccessKey(), config.getOutputSecretKey());
+                    Redis.ConfigRedis(storageInfo.getEndpoint(), storageInfo.getAccessKey(), storageInfo.getSecretKey());
                 }
-                Storage storage = StorageFactory.Instance().getStorage(config.getOutputScheme());
+                Storage storage = StorageFactory.Instance().getStorage(config.getOutputStorageScheme());
                 IntermediateFileCleaner.Instance().registerStorage(storage);
                 return new PixelsPageSource(pixelsSplit, pixelsColumns, includeCols, storage, cacheFile, indexFile,
                         pixelsFooterCache, getLambdaOutput(pixelsSplit, includeCols, projection), null);
@@ -156,6 +157,9 @@ public class PixelsPageSourceProvider
 
     private CompletableFuture<?> getLambdaOutput(PixelsSplit inputSplit, String[] columnsToRead, boolean[] projection)
     {
+        checkArgument(Storage.Scheme.from(inputSplit.getStorageScheme()).equals(config.getInputStorageScheme()), String.format(
+                "the storage scheme of table '%s.%s' is not consistent with the input storage scheme for Pixels Turbo",
+                inputSplit.getSchemaName(), inputSplit.getTableName()));
         ScanInput scanInput = new ScanInput();
         scanInput.setQueryId(inputSplit.getQueryId());
         ScanTableInfo tableInfo = new ScanTableInfo();
@@ -166,15 +170,14 @@ public class PixelsPageSourceProvider
         TableScanFilter filter = createTableScanFilter(inputSplit.getSchemaName(),
                 inputSplit.getTableName(), columnsToRead, inputSplit.getConstraint());
         tableInfo.setFilter(JSON.toJSONString(filter));
+        tableInfo.setBase(true);
+        tableInfo.setStorageInfo(config.getInputStorageInfo());
         scanInput.setTableInfo(tableInfo);
         scanInput.setScanProjection(projection);
         // logger.info("table scan filter: " + tableInfo.getFilter());
         String folder = config.getOutputFolderForQuery(inputSplit.getQueryId());
-        String endpoint = config.getOutputEndpoint();
-        String accessKey = config.getOutputAccessKey();
-        String secretKey = config.getOutputSecretKey();
         OutputInfo outputInfo = new OutputInfo(folder, true,
-                new StorageInfo(config.getOutputScheme(), endpoint, accessKey, secretKey), true);
+                config.getOutputStorageInfo(), true);
         scanInput.setOutput(outputInfo);
 
         return InvokerFactory.Instance().getInvoker(WorkerType.SCAN)
@@ -185,7 +188,7 @@ public class PixelsPageSourceProvider
             }
             try
             {
-                inputSplit.permute(config.getOutputScheme(), (ScanOutput) scanOutput);
+                inputSplit.permute(config.getOutputStorageScheme(), (ScanOutput) scanOutput);
             }
             catch (Exception e)
             {
