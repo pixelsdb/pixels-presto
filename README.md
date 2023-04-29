@@ -49,19 +49,36 @@ pixels.config=/home/ubuntu/opt/pixels/pixels.properties
 lambda.enabled=false
 local.scan.concurrency=0
 clean.local.result=true
-output.scheme=s3
-output.folder=output-folder-dummy
-output.endpoint=output-endpoint-dummy
-output.access.key=lambda
-output.secret.key=password
 ```
 `pixels.config` is used to specify the config file for Pixels, and has a higher priority than the config file under `PIXELS_HOME`.
 **Note** that `etc/catalog/pixels.proterties` under Presto's home is different from `PIXELS_HOME/pixels.properties`.
 The other properties are related to serverless execution.
-In Presto, Pixels can push down table scan (i.e., projection and selection) into AWS lambda. This is similar to Redshift Spectrum.
-This feature can be turned on by setting `lambda.enabled` to `true`, `output.scheme` to the storage scheme of the intermediate files (e.g. s3),
-`output.folder` to the directory of the intermediate files, `output.endpoint` to the endpoint of the intermediate storage,
-and `output.access/secret.key` to the access/secret key of the intermediate storage.
+In Presto, Pixels can push down table scan (i.e., projection and selection) into serverless computing services such as AWS lambda. 
+This feature is similar to Redshift Spectrum, and it is a restricted version of 
+[`Pixels Turbo`](https://github.com/pixelsdb/pixels/tree/master/pixels-turbo).
+We call it `Pixels Turbo Lite`.
+It can be turned on by setting `lambda.enabled` to `true`.
+
+If `Pixels Turbo Lite` is enabled, we also need to set the following settings in `PIXELS_HOME/pixels.properties`:
+```properties
+executor.input.storage.scheme=s3
+executor.input.storage.endpoint=input-endpoint-dummy
+executor.input.storage.access.key=input-ak-dummy
+executor.input.storage.secret.key=input-sk-dummy
+executor.output.storage.scheme=s3
+executor.output.storage.endpoint=output-endpoint-dummy
+executor.output.storage.access.key=output-ak-dummy
+executor.output.storage.secret.key=output-sk-dummy
+executor.output.folder=/pixels-lambda-test/
+```
+Those storage schemes, endpoints, and access and secret keys are used to access the input data
+(the data of the base tables defined by `CREATE TABLE` statements) and the output data 
+(the result of the sub-plan executed in the serverless workers), respectively.
+Ensure that they are valid so that the serverless workers can access the corresponding storage systems.
+Especially, the `executor.input.storage.scheme` must be consistent with the storage scheme of the base
+tables. This is checked during query-planning for Pixels Turbo.
+In addition, the `executor.output.folder` is the base path where the scan output is stored. 
+It also needs to be valid and accessible for the serverless workers.
 
 ### Install Pixels Event Listener*
 Pixels event listener is optional. It is used to collect the query completion information for performance evaluations.
