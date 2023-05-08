@@ -233,12 +233,12 @@ public class PixelsPrestoConfig
     }
 
     @NotNull
-    public String getOutputFolderForQuery(long queryId)
+    public String getOutputFolderForQuery(long transId)
     {
         /* Must end with '/', otherwise it will not be considered
          * as a folder in S3-like storage.
          */
-        return this.outputFolder + queryId + "/";
+        return this.outputFolder + transId + "/";
     }
 
     /**

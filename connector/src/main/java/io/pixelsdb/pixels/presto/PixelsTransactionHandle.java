@@ -43,7 +43,7 @@ public class PixelsTransactionHandle
 
     /**
      * Create a transaction handle.
-     * @param transId is also the queryId as a query is a single-statement read-only transaction.
+     * @param transId is also the query id as a query is a single-statement read-only transaction.
      * @param timestamp the timestamp of a transaction.
      */
     @JsonCreator

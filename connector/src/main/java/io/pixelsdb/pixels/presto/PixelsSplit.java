@@ -44,7 +44,7 @@ import static java.util.Objects.requireNonNull;
  */
 public class PixelsSplit
         implements ConnectorSplit {
-    private final long queryId;
+    private final long transId;
     private final String connectorId;
     private final String schemaName;
     private final String tableName;
@@ -62,7 +62,7 @@ public class PixelsSplit
 
     @JsonCreator
     public PixelsSplit(
-            @JsonProperty("queryId") long queryId,
+            @JsonProperty("transId") long transId,
             @JsonProperty("connectorId") String connectorId,
             @JsonProperty("schemaName") String schemaName,
             @JsonProperty("tableName") String tableName,
@@ -76,6 +76,7 @@ public class PixelsSplit
             @JsonProperty("columnOrder") List<String> columnOrder,
             @JsonProperty("cacheOrder") List<String> cacheOrder,
             @JsonProperty("constraint") TupleDomain<PixelsColumnHandle> constraint) {
+        this.transId = transId;
         this.schemaName = requireNonNull(schemaName, "schema name is null");
         this.connectorId = requireNonNull(connectorId, "connector id is null");
         this.tableName = requireNonNull(tableName, "table name is null");
@@ -83,7 +84,6 @@ public class PixelsSplit
         this.paths = requireNonNull(paths, "paths is null");
         checkArgument(!paths.isEmpty(), "paths is empty");
         this.pathIndex = 0;
-        this.queryId = queryId;
         this.rgStarts = requireNonNull(rgStarts, "rgStarts is null");
         checkArgument(rgStarts.size() == paths.size(),
                 "the size of rgStarts and paths are different");
@@ -152,8 +152,8 @@ public class PixelsSplit
     }
 
     @JsonProperty
-    public long getQueryId() {
-        return queryId;
+    public long getTransId() {
+        return transId;
     }
 
     @JsonProperty

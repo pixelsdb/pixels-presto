@@ -26,7 +26,6 @@ import com.facebook.presto.spi.connector.*;
 import com.facebook.presto.spi.session.PropertyMetadata;
 import com.facebook.presto.spi.transaction.IsolationLevel;
 import io.pixelsdb.pixels.common.exception.TransException;
-import io.pixelsdb.pixels.common.transaction.QueryTransInfo;
 import io.pixelsdb.pixels.common.transaction.TransContext;
 import io.pixelsdb.pixels.common.transaction.TransService;
 import io.pixelsdb.pixels.presto.exception.PixelsErrorCode;
@@ -85,16 +84,15 @@ public class PixelsConnector
          * PIXELS-172:
          * Be careful that Presto does not set readOnly to true for normal queries.
          */
-        QueryTransInfo info;
+        TransContext context;
         try
         {
-            info = this.transService.getQueryTransInfo();
+            context = this.transService.beginTrans(true);
         } catch (TransException e)
         {
             throw new PrestoException(PixelsErrorCode.PIXELS_TRANS_SERVICE_ERROR, e);
         }
-        TransContext.Instance().beginQuery(info);
-        return new PixelsTransactionHandle(info.getQueryId(), info.getQueryTimestamp());
+        return new PixelsTransactionHandle(context.getTransId(), context.getTimestamp());
     }
 
     @Override
@@ -103,7 +101,13 @@ public class PixelsConnector
         if (transactionHandle instanceof PixelsTransactionHandle)
         {
             PixelsTransactionHandle handle = (PixelsTransactionHandle) transactionHandle;
-            TransContext.Instance().commitQuery(handle.getTransId());
+            try
+            {
+                this.transService.commitTrans(handle.getTransId(), handle.getTimestamp());
+            } catch (TransException e)
+            {
+                throw new PrestoException(PixelsErrorCode.PIXELS_TRANS_SERVICE_ERROR, e);
+            }
             cleanIntermediatePathForQuery(handle.getTransId());
         } else
         {
@@ -119,7 +123,13 @@ public class PixelsConnector
         if (transactionHandle instanceof PixelsTransactionHandle)
         {
             PixelsTransactionHandle handle = (PixelsTransactionHandle) transactionHandle;
-            TransContext.Instance().rollbackQuery(handle.getTransId());
+            try
+            {
+                this.transService.rollbackTrans(handle.getTransId());
+            } catch (TransException e)
+            {
+                throw new PrestoException(PixelsErrorCode.PIXELS_TRANS_SERVICE_ERROR, e);
+            }
             cleanIntermediatePathForQuery(handle.getTransId());
         } else
         {
@@ -128,7 +138,7 @@ public class PixelsConnector
         }
     }
 
-    private void cleanIntermediatePathForQuery(long queryId)
+    private void cleanIntermediatePathForQuery(long transId)
     {
         if (config.isLambdaEnabled())
         {
@@ -136,7 +146,7 @@ public class PixelsConnector
             {
                 if (config.isCleanLocalResult())
                 {
-                    IntermediateFileCleaner.Instance().asyncDelete(config.getOutputFolderForQuery(queryId));
+                    IntermediateFileCleaner.Instance().asyncDelete(config.getOutputFolderForQuery(transId));
                 }
             } catch (InterruptedException e)
             {
