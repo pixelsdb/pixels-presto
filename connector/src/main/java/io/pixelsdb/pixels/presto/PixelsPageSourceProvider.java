@@ -117,7 +117,7 @@ public class PixelsPageSourceProvider
 
         try
         {
-            if (config.isLambdaEnabled() && this.localSplitCounter.get() >= config.getLocalScanConcurrency()
+            if (config.isCloudFunctionEnabled() && this.localSplitCounter.get() >= config.getLocalScanConcurrency()
                     /**
                      * Issue #12:
                      * If the number of columns to read is 0, the spits should not be processed by Lambda.
@@ -161,7 +161,7 @@ public class PixelsPageSourceProvider
                 "the storage scheme of table '%s.%s' is not consistent with the input storage scheme for Pixels Turbo",
                 inputSplit.getSchemaName(), inputSplit.getTableName()));
         ScanInput scanInput = new ScanInput();
-        scanInput.setQueryId(inputSplit.getQueryId());
+        scanInput.setTransId(inputSplit.getTransId());
         ScanTableInfo tableInfo = new ScanTableInfo();
         tableInfo.setTableName(inputSplit.getTableName());
         tableInfo.setColumnsToRead(columnsToRead);
@@ -175,7 +175,7 @@ public class PixelsPageSourceProvider
         scanInput.setTableInfo(tableInfo);
         scanInput.setScanProjection(projection);
         // logger.info("table scan filter: " + tableInfo.getFilter());
-        String folder = config.getOutputFolderForQuery(inputSplit.getQueryId());
+        String folder = config.getOutputFolderForQuery(inputSplit.getTransId());
         OutputInfo outputInfo = new OutputInfo(folder, true,
                 config.getOutputStorageInfo(), true);
         scanInput.setOutput(outputInfo);

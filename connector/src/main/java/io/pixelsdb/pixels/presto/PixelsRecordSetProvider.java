@@ -77,7 +77,7 @@ public class PixelsRecordSetProvider implements ConnectorRecordSetProvider
                                   ConnectorSession session,
                                   ConnectorSplit split, List<? extends ColumnHandle> columns)
     {
-        if (config.isLambdaEnabled())
+        if (config.isCloudFunctionEnabled())
         {
             throw new PrestoException(PixelsErrorCode.PIXELS_CONFIG_ERROR,
                     "PixelsRecordSet does not support lambda coprocessor.");

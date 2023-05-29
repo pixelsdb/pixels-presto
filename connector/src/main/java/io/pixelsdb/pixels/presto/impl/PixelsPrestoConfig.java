@@ -52,7 +52,7 @@ public class PixelsPrestoConfig
     }
 
     private String pixelsConfig = null;
-    private boolean lambdaEnabled = false;
+    private boolean cloudFunctionEnabled = false;
     private boolean cleanLocalResult = true;
     private int localScanConcurrency = -1;
     /**
@@ -162,11 +162,11 @@ public class PixelsPrestoConfig
         return this.pixelsConfig;
     }
 
-    @Config("lambda.enabled")
-    public PixelsPrestoConfig setLambdaEnabled(boolean enabled)
+    @Config("cloud.function.enabled")
+    public PixelsPrestoConfig setCloudFunctionEnabled(boolean enabled)
     {
-        this.lambdaEnabled = enabled;
-        if (this.lambdaEnabled)
+        this.cloudFunctionEnabled = enabled;
+        if (this.cloudFunctionEnabled)
         {
             /**
              * PIXELS-416:
@@ -193,9 +193,9 @@ public class PixelsPrestoConfig
         return this;
     }
 
-    public boolean isLambdaEnabled()
+    public boolean isCloudFunctionEnabled()
     {
-        return lambdaEnabled;
+        return cloudFunctionEnabled;
     }
 
     public int getLocalScanConcurrency()
@@ -233,12 +233,12 @@ public class PixelsPrestoConfig
     }
 
     @NotNull
-    public String getOutputFolderForQuery(long queryId)
+    public String getOutputFolderForQuery(long transId)
     {
         /* Must end with '/', otherwise it will not be considered
          * as a folder in S3-like storage.
          */
-        return this.outputFolder + queryId + "/";
+        return this.outputFolder + transId + "/";
     }
 
     /**
