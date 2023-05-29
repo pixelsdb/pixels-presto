@@ -140,7 +140,7 @@ public class PixelsConnector
 
     private void cleanIntermediatePathForQuery(long transId)
     {
-        if (config.isLambdaEnabled())
+        if (config.isCloudFunctionEnabled())
         {
             try
             {

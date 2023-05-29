@@ -117,7 +117,7 @@ public class PixelsPageSourceProvider
 
         try
         {
-            if (config.isLambdaEnabled() && this.localSplitCounter.get() >= config.getLocalScanConcurrency()
+            if (config.isCloudFunctionEnabled() && this.localSplitCounter.get() >= config.getLocalScanConcurrency()
                     /**
                      * Issue #12:
                      * If the number of columns to read is 0, the spits should not be processed by Lambda.
