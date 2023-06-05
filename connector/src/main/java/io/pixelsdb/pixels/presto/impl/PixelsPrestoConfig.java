@@ -27,6 +27,7 @@ import io.pixelsdb.pixels.common.physical.StorageFactory;
 import io.pixelsdb.pixels.common.turbo.InvokerFactory;
 import io.pixelsdb.pixels.common.utils.ConfigFactory;
 import io.pixelsdb.pixels.planner.plan.physical.domain.StorageInfo;
+import io.pixelsdb.pixels.planner.plan.physical.domain.StorageInfoBuilder;
 import io.pixelsdb.pixels.presto.exception.PixelsErrorCode;
 
 import javax.validation.constraints.NotNull;
@@ -53,7 +54,7 @@ public class PixelsPrestoConfig
 
     private String pixelsConfig = null;
     private boolean cloudFunctionEnabled = false;
-    private boolean cleanLocalResult = true;
+    private boolean cleanIntermediateResult = true;
     private int localScanConcurrency = -1;
     /**
      * The storage info of the inputs of Pixels Turbo.
@@ -137,16 +138,10 @@ public class PixelsPrestoConfig
         }
 
         this.inputStorageScheme = Storage.Scheme.from(this.configFactory.getProperty("executor.input.storage.scheme"));
-        String inputEndpoint = this.configFactory.getProperty("executor.input.storage.endpoint");
-        String inputAccessKey = this.configFactory.getProperty("executor.input.storage.access.key");
-        String inputSecretKey = this.configFactory.getProperty("executor.input.storage.secret.key");
-        this.inputStorageInfo = new StorageInfo(this.inputStorageScheme, inputEndpoint, inputAccessKey, inputSecretKey);
+        this.inputStorageInfo = StorageInfoBuilder.BuildFromConfig(this.inputStorageScheme);
 
         this.outputStorageScheme = Storage.Scheme.from(this.configFactory.getProperty("executor.output.storage.scheme"));
-        String outputEndpoint = this.configFactory.getProperty("executor.output.storage.endpoint");
-        String outputAccessKey = this.configFactory.getProperty("executor.output.storage.access.key");
-        String outputSecretKey = this.configFactory.getProperty("executor.output.storage.secret.key");
-        this.outputStorageInfo = new StorageInfo(this.outputStorageScheme, outputEndpoint, outputAccessKey, outputSecretKey);
+        this.outputStorageInfo = StorageInfoBuilder.BuildFromConfig(this.outputStorageScheme);
         this.outputFolder = this.configFactory.getProperty("executor.output.folder");
         if (!this.outputFolder.endsWith("/"))
         {
@@ -179,10 +174,10 @@ public class PixelsPrestoConfig
         return this;
     }
 
-    @Config("clean.local.result")
-    public PixelsPrestoConfig setCleanLocalResult(boolean cleanLocalResult)
+    @Config("clean.intermediate.result")
+    public PixelsPrestoConfig setCleanIntermediateResult(boolean cleanIntermediateResult)
     {
-        this.cleanLocalResult = cleanLocalResult;
+        this.cleanIntermediateResult = cleanIntermediateResult;
         return this;
     }
 
@@ -203,9 +198,9 @@ public class PixelsPrestoConfig
         return localScanConcurrency;
     }
 
-    public boolean isCleanLocalResult()
+    public boolean isCleanIntermediateResult()
     {
-        return cleanLocalResult;
+        return cleanIntermediateResult;
     }
 
     @NotNull

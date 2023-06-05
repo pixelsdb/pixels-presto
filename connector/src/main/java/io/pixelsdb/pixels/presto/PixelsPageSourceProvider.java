@@ -28,17 +28,14 @@ import com.google.inject.Inject;
 import io.pixelsdb.pixels.common.physical.Storage;
 import io.pixelsdb.pixels.common.physical.StorageFactory;
 import io.pixelsdb.pixels.common.physical.natives.MemoryMappedFile;
-import io.pixelsdb.pixels.storage.s3.Minio;
-import io.pixelsdb.pixels.storage.redis.Redis;
-import io.pixelsdb.pixels.core.PixelsFooterCache;
-import io.pixelsdb.pixels.core.utils.Pair;
 import io.pixelsdb.pixels.common.turbo.InvokerFactory;
 import io.pixelsdb.pixels.common.turbo.WorkerType;
+import io.pixelsdb.pixels.core.PixelsFooterCache;
+import io.pixelsdb.pixels.core.utils.Pair;
 import io.pixelsdb.pixels.executor.predicate.TableScanFilter;
 import io.pixelsdb.pixels.planner.plan.physical.domain.InputSplit;
 import io.pixelsdb.pixels.planner.plan.physical.domain.OutputInfo;
 import io.pixelsdb.pixels.planner.plan.physical.domain.ScanTableInfo;
-import io.pixelsdb.pixels.planner.plan.physical.domain.StorageInfo;
 import io.pixelsdb.pixels.planner.plan.physical.input.ScanInput;
 import io.pixelsdb.pixels.planner.plan.physical.output.ScanOutput;
 import io.pixelsdb.pixels.presto.exception.PixelsErrorCode;
@@ -128,15 +125,6 @@ public class PixelsPageSourceProvider
             {
                 boolean[] projection = new boolean[includeCols.length];
                 Arrays.fill(projection, true);
-                StorageInfo storageInfo = config.getOutputStorageInfo();
-                if (storageInfo.getScheme() == Storage.Scheme.minio)
-                {
-                    Minio.ConfigMinio(storageInfo.getEndpoint(), storageInfo.getAccessKey(), storageInfo.getSecretKey());
-                }
-                else if (storageInfo.getScheme() == Storage.Scheme.redis)
-                {
-                    Redis.ConfigRedis(storageInfo.getEndpoint(), storageInfo.getAccessKey(), storageInfo.getSecretKey());
-                }
                 Storage storage = StorageFactory.Instance().getStorage(config.getOutputStorageScheme());
                 IntermediateFileCleaner.Instance().registerStorage(storage);
                 return new PixelsPageSource(pixelsSplit, pixelsColumns, includeCols, storage, cacheFile, indexFile,

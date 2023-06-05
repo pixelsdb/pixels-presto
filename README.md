@@ -48,7 +48,7 @@ pixels.config=/home/ubuntu/opt/pixels/pixels.properties
 # serverless config
 lambda.enabled=false
 local.scan.concurrency=0
-clean.local.result=true
+clean.intermediate.result=true
 ```
 `pixels.config` is used to specify the config file for Pixels, and has a higher priority than the config file under `PIXELS_HOME`.
 **Note** that `etc/catalog/pixels.proterties` under Presto's home is different from `PIXELS_HOME/pixels.properties`.
