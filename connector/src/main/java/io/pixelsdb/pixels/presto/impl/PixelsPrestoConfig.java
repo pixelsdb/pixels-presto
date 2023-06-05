@@ -54,7 +54,7 @@ public class PixelsPrestoConfig
 
     private String pixelsConfig = null;
     private boolean cloudFunctionEnabled = false;
-    private boolean cleanLocalResult = true;
+    private boolean cleanIntermediateResult = true;
     private int localScanConcurrency = -1;
     /**
      * The storage info of the inputs of Pixels Turbo.
@@ -174,10 +174,10 @@ public class PixelsPrestoConfig
         return this;
     }
 
-    @Config("clean.local.result")
-    public PixelsPrestoConfig setCleanLocalResult(boolean cleanLocalResult)
+    @Config("clean.intermediate.result")
+    public PixelsPrestoConfig setCleanIntermediateResult(boolean cleanIntermediateResult)
     {
-        this.cleanLocalResult = cleanLocalResult;
+        this.cleanIntermediateResult = cleanIntermediateResult;
         return this;
     }
 
@@ -198,9 +198,9 @@ public class PixelsPrestoConfig
         return localScanConcurrency;
     }
 
-    public boolean isCleanLocalResult()
+    public boolean isCleanIntermediateResult()
     {
-        return cleanLocalResult;
+        return cleanIntermediateResult;
     }
 
     @NotNull

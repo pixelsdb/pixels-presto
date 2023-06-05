@@ -144,7 +144,7 @@ public class PixelsConnector
         {
             try
             {
-                if (config.isCleanLocalResult())
+                if (config.isCleanIntermediateResult())
                 {
                     IntermediateFileCleaner.Instance().asyncDelete(config.getOutputFolderForQuery(transId));
                 }
