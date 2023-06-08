@@ -150,6 +150,7 @@ public class PixelsPageSourceProvider
                 inputSplit.getSchemaName(), inputSplit.getTableName()));
         ScanInput scanInput = new ScanInput();
         scanInput.setTransId(inputSplit.getTransId());
+        scanInput.setOperatorName("scan_" + inputSplit.getTableName());
         ScanTableInfo tableInfo = new ScanTableInfo();
         tableInfo.setTableName(inputSplit.getTableName());
         tableInfo.setColumnsToRead(columnsToRead);
