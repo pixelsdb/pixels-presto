@@ -239,7 +239,7 @@ public class PixelsSplitManager
             {
                 Compact compact = layout.getCompact();
                 int cacheBorder = compact.getCacheBorder();
-                List<String> cacheColumnletOrders = compact.getColumnletOrder().subList(0, cacheBorder);
+                List<String> cacheColumnChunkOrders = compact.getColumnChunkOrder().subList(0, cacheBorder);
                 String cacheVersion;
                 EtcdUtil etcdUtil = EtcdUtil.Instance();
                 KeyValue keyValue = etcdUtil.getKeyValue(Constants.CACHE_VERSION_LITERAL);
@@ -336,7 +336,7 @@ public class PixelsSplitManager
                                                 table.getStorageScheme().name(), Arrays.asList(path),
                                                 Arrays.asList(curFileRGIdx), Arrays.asList(splitSize),
                                                 true, ensureLocality, compactAddresses, order.getColumnOrder(),
-                                                cacheColumnletOrders, constraint);
+                                                cacheColumnChunkOrders, constraint);
                                         pixelsSplits.add(pixelsSplit);
                                         // log.debug("Split in compactPaths" + pixelsSplit.toString());
                                         curFileRGIdx += splitSize;
