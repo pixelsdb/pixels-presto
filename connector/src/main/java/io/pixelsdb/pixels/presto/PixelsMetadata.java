@@ -428,22 +428,16 @@ public class PixelsMetadata
         String schemaName = schemaTableName.getSchemaName();
         String tableName = schemaTableName.getTableName();
         String storage = (String) tableMetadata.getProperties().get("storage");
-        String orderedPaths = (String) tableMetadata.getProperties().get("ordered_paths");
-        String compactPaths = (String) tableMetadata.getProperties().get("compact_paths");
+        String paths = (String) tableMetadata.getProperties().get("paths");
         if (storage == null)
         {
             throw new PrestoException(PixelsErrorCode.PIXELS_QUERY_PARSING_ERROR,
                     "Table must be created with the property 'storage'.");
         }
-        if (orderedPaths == null)
+        if (paths == null)
         {
             throw new PrestoException(PixelsErrorCode.PIXELS_QUERY_PARSING_ERROR,
-                    "Table must be created with the property 'ordered_paths'.");
-        }
-        if (compactPaths == null)
-        {
-            throw new PrestoException(PixelsErrorCode.PIXELS_QUERY_PARSING_ERROR,
-                    "Table must be created with the property 'compact_paths'.");
+                    "Table must be created with the property 'paths'.");
         }
         if (!Storage.Scheme.isValid(storage))
         {
@@ -451,32 +445,22 @@ public class PixelsMetadata
                     "Unsupported storage scheme '" + storage + "'.");
         }
         Storage.Scheme storageScheme = Storage.Scheme.from(storage);
-        String[] orderedPathUris = orderedPaths.split(";");
-        for (int i = 0; i < orderedPathUris.length; ++i)
+        String[] basePathUris = paths.split(";");
+        for (int i = 0; i < basePathUris.length; ++i)
         {
-            Storage.Scheme scheme = Storage.Scheme.fromPath(orderedPathUris[i]);
+            Storage.Scheme scheme = Storage.Scheme.fromPath(basePathUris[i]);
             if (scheme == null)
             {
-                orderedPathUris[i] = storageScheme + "://" + orderedPathUris[i];
+                basePathUris[i] = storageScheme + "://" + basePathUris[i];
             }
             if (scheme != storageScheme)
             {
                 throw new PrestoException(PixelsErrorCode.PIXELS_QUERY_PARSING_ERROR,
-                        "The storage schemes in 'ordered_paths' are inconsistent with 'storage'.");
+                        "The storage schemes in 'paths' are inconsistent with 'storage'.");
             }
-        }
-        String[] compactPathUris = compactPaths.split(";");
-        for (int i = 0; i < compactPathUris.length; ++i)
-        {
-            Storage.Scheme scheme = Storage.Scheme.fromPath(compactPathUris[i]);
-            if (scheme == null)
+            if (!basePathUris[i].endsWith("/"))
             {
-                compactPathUris[i] = storageScheme + "://" + compactPathUris[i];
-            }
-            if (scheme != storageScheme)
-            {
-                throw new PrestoException(PixelsErrorCode.PIXELS_QUERY_PARSING_ERROR,
-                        "The storage schemes in 'compact_paths' are inconsistent with 'storage'.");
+                basePathUris[i] = basePathUris[i] + "/";
             }
         }
         List<Column> columns = new ArrayList<>();
@@ -494,7 +478,7 @@ public class PixelsMetadata
         try
         {
             boolean res = this.metadataProxy.createTable(schemaName, tableName, storageScheme,
-                    Arrays.asList(orderedPathUris), Arrays.asList(compactPathUris), columns);
+                    Arrays.asList(basePathUris), columns);
             if (!res && !ignoreExisting)
             {
                 throw  new PrestoException(PixelsErrorCode.PIXELS_SQL_EXECUTE_ERROR,
