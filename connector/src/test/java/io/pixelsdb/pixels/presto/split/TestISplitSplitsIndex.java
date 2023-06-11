@@ -130,7 +130,7 @@ public class TestISplitSplitsIndex
             columnSet.addColumn("IsHomepageView".toLowerCase());
             SplitPattern bestPattern = index.search(columnSet);
             int splitSize = bestPattern.getSplitSize();
-            int rowGroupNum = splits.getNumRowGroupInBlock();
+            int rowGroupNum = splits.getNumRowGroupInFile();
             System.out.println(bestPattern.toString());
             System.out.println(rowGroupNum);
             System.out.println(splitSize);
@@ -141,7 +141,7 @@ public class TestISplitSplitsIndex
     private InvertedSplitsIndex getInverted(Ordered ordered, Splits splits, SchemaTableName schemaTableName) {
         List<String> columnOrder = ordered.getColumnOrder();
         InvertedSplitsIndex index;
-        index = new InvertedSplitsIndex(columnOrder, SplitPattern.buildPatterns(columnOrder, splits), splits.getNumRowGroupInBlock());
+        index = new InvertedSplitsIndex(columnOrder, SplitPattern.buildPatterns(columnOrder, splits), splits.getNumRowGroupInFile());
         IndexFactory.Instance().cacheSplitsIndex(schemaTableName, index);
         return index;
     }
