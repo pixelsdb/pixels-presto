@@ -427,12 +427,57 @@ public class PixelsMetadata
         SchemaTableName schemaTableName = tableMetadata.getTable();
         String schemaName = schemaTableName.getSchemaName();
         String tableName = schemaTableName.getTableName();
-        String storageScheme = ((String) Optional.ofNullable(tableMetadata.getProperties().get("storage"))
-                .orElse("hdfs")).toLowerCase(); // use HDFS by default.
-        if (!Storage.Scheme.isValid(storageScheme))
+        String storage = (String) tableMetadata.getProperties().get("storage");
+        String orderedPaths = (String) tableMetadata.getProperties().get("ordered_paths");
+        String compactPaths = (String) tableMetadata.getProperties().get("compact_paths");
+        if (storage == null)
         {
-            throw new PrestoException(PixelsErrorCode.PIXELS_METASTORE_ERROR,
-                    "Unsupported storage scheme '" + storageScheme + "'.");
+            throw new PrestoException(PixelsErrorCode.PIXELS_QUERY_PARSING_ERROR,
+                    "Table must be created with the property 'storage'.");
+        }
+        if (orderedPaths == null)
+        {
+            throw new PrestoException(PixelsErrorCode.PIXELS_QUERY_PARSING_ERROR,
+                    "Table must be created with the property 'ordered_paths'.");
+        }
+        if (compactPaths == null)
+        {
+            throw new PrestoException(PixelsErrorCode.PIXELS_QUERY_PARSING_ERROR,
+                    "Table must be created with the property 'compact_paths'.");
+        }
+        if (!Storage.Scheme.isValid(storage))
+        {
+            throw new PrestoException(PixelsErrorCode.PIXELS_QUERY_PARSING_ERROR,
+                    "Unsupported storage scheme '" + storage + "'.");
+        }
+        Storage.Scheme storageScheme = Storage.Scheme.from(storage);
+        String[] orderedPathUris = orderedPaths.split(";");
+        for (int i = 0; i < orderedPathUris.length; ++i)
+        {
+            Storage.Scheme scheme = Storage.Scheme.fromPath(orderedPathUris[i]);
+            if (scheme == null)
+            {
+                orderedPathUris[i] = storageScheme + "://" + orderedPathUris[i];
+            }
+            if (scheme != storageScheme)
+            {
+                throw new PrestoException(PixelsErrorCode.PIXELS_QUERY_PARSING_ERROR,
+                        "The storage schemes in 'ordered_paths' are inconsistent with 'storage'.");
+            }
+        }
+        String[] compactPathUris = compactPaths.split(";");
+        for (int i = 0; i < compactPathUris.length; ++i)
+        {
+            Storage.Scheme scheme = Storage.Scheme.fromPath(compactPathUris[i]);
+            if (scheme == null)
+            {
+                compactPathUris[i] = storageScheme + "://" + compactPathUris[i];
+            }
+            if (scheme != storageScheme)
+            {
+                throw new PrestoException(PixelsErrorCode.PIXELS_QUERY_PARSING_ERROR,
+                        "The storage schemes in 'compact_paths' are inconsistent with 'storage'.");
+            }
         }
         List<Column> columns = new ArrayList<>();
         for (ColumnMetadata columnMetadata : tableMetadata.getColumns())
@@ -448,8 +493,9 @@ public class PixelsMetadata
         }
         try
         {
-            boolean res = this.metadataProxy.createTable(schemaName, tableName, storageScheme, columns);
-            if (res == false && ignoreExisting == false)
+            boolean res = this.metadataProxy.createTable(schemaName, tableName, storageScheme,
+                    Arrays.asList(orderedPathUris), Arrays.asList(compactPathUris), columns);
+            if (!res && !ignoreExisting)
             {
                 throw  new PrestoException(PixelsErrorCode.PIXELS_SQL_EXECUTE_ERROR,
                         "Table '" + schemaTableName + "' might already exist, failed to create it.");
@@ -470,7 +516,7 @@ public class PixelsMetadata
         try
         {
             boolean res = this.metadataProxy.dropTable(schemaName, tableName);
-            if (res == false)
+            if (!res)
             {
                 throw  new PrestoException(PixelsErrorCode.PIXELS_SQL_EXECUTE_ERROR,
                         "Table " + schemaName + "." + tableName + " does not exist.");

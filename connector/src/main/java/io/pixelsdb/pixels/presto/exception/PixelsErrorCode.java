@@ -25,8 +25,7 @@ import com.facebook.presto.common.ErrorType;
 
 import static com.facebook.presto.common.ErrorType.*;
 
-public enum PixelsErrorCode
-        implements ErrorCodeSupplier
+public enum PixelsErrorCode implements ErrorCodeSupplier
 {
     PIXELS_METASTORE_ERROR(0, EXTERNAL),
     PIXELS_CURSOR_ERROR(1, EXTERNAL),
@@ -45,7 +44,7 @@ public enum PixelsErrorCode
     PIXELS_DATABASE_LOCATION_ERROR(14, EXTERNAL),
     PIXELS_PATH_ALREADY_EXISTS(15, EXTERNAL),
     PIXELS_FILESYSTEM_ERROR(16, EXTERNAL),
-    // code PIXELS_WRITER_ERROR(17) is deprecated
+    PIXELS_WRITER_ERROR(17, EXTERNAL),
     PIXELS_SERDE_NOT_FOUND(18, EXTERNAL),
     PIXELS_UNSUPPORTED_FORMAT(19, EXTERNAL),
     PIXELS_PARTITION_READ_ONLY(20, USER_ERROR),
@@ -81,7 +80,9 @@ public enum PixelsErrorCode
     PIXELS_STORAGE_ERROR(50, EXTERNAL),
     PIXELS_TRANS_SERVICE_ERROR(51, EXTERNAL),
     PIXELS_TRANS_HANDLE_TYPE_ERROR(52, EXTERNAL),
-    PIXELS_DATA_TYPE_ERROR(53, EXTERNAL)
+    PIXELS_DATA_TYPE_ERROR(53, EXTERNAL),
+    PIXELS_QUERY_SCHEDULE_ERROR(54, EXTERNAL),
+    PIXELS_QUERY_PARSING_ERROR(55, EXTERNAL)
     /**/;
 
     private final ErrorCode errorCode;
