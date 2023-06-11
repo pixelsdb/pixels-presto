@@ -19,13 +19,12 @@
  */
 package io.pixelsdb.pixels.presto.split;
 
-import com.alibaba.fastjson.JSON;
 import io.pixelsdb.pixels.common.exception.MetadataException;
 import io.pixelsdb.pixels.common.layout.*;
 import io.pixelsdb.pixels.common.metadata.MetadataService;
 import io.pixelsdb.pixels.common.metadata.SchemaTableName;
 import io.pixelsdb.pixels.common.metadata.domain.Layout;
-import io.pixelsdb.pixels.common.metadata.domain.Order;
+import io.pixelsdb.pixels.common.metadata.domain.Ordered;
 import io.pixelsdb.pixels.common.metadata.domain.Splits;
 import org.junit.Test;
 
@@ -83,25 +82,25 @@ public class TestISplitSplitsIndex
     @Test
     public void testRemote () throws MetadataException, InterruptedException
     {
-        MetadataService metadataService = new MetadataService("dbiir01", 18888);
+        MetadataService metadataService = new MetadataService("node01", 18888);
         List<Layout> layouts = metadataService.getLayouts("pixels", "test_105");
         for (Layout layout : layouts)
         {
             // get index
-            int version = layout.getVersion();
+            long version = layout.getVersion();
             SchemaTableName schemaTableName = new SchemaTableName("pixels", "test_105");
             InvertedSplitsIndex index = (InvertedSplitsIndex) IndexFactory.Instance().getSplitsIndex(schemaTableName);
-            Order order = JSON.parseObject(layout.getOrder(), Order.class);
-            Splits splits = JSON.parseObject(layout.getSplits(), Splits.class);
+            Ordered ordered = layout.getOrdered();
+            Splits splits = layout.getSplits();
             if (index == null)
             {
-                index = getInverted(order, splits, schemaTableName);
+                index = getInverted(ordered, splits, schemaTableName);
             }
             else
             {
                 int indexVersion = index.getVersion();
                 if (indexVersion < version) {
-                    index = getInverted(order, splits, schemaTableName);
+                    index = getInverted(ordered, splits, schemaTableName);
                 }
             }
 
@@ -139,8 +138,8 @@ public class TestISplitSplitsIndex
         metadataService.shutdown();
     }
 
-    private InvertedSplitsIndex getInverted(Order order, Splits splits, SchemaTableName schemaTableName) {
-        List<String> columnOrder = order.getColumnOrder();
+    private InvertedSplitsIndex getInverted(Ordered ordered, Splits splits, SchemaTableName schemaTableName) {
+        List<String> columnOrder = ordered.getColumnOrder();
         InvertedSplitsIndex index;
         index = new InvertedSplitsIndex(columnOrder, SplitPattern.buildPatterns(columnOrder, splits), splits.getNumRowGroupInBlock());
         IndexFactory.Instance().cacheSplitsIndex(schemaTableName, index);
