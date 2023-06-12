@@ -57,7 +57,7 @@ public class TestHdfs {
     @Test
     public void testReadBlock() throws IOException
     {
-        String filePath = "hdfs://dbiir01:9000/pixels/pixels/test_105/v_2_order/201809231217040.pxl";
+        String filePath = "hdfs://node01:9000/pixels/pixels/test_105/v_2_order/201809231217040.pxl";
         PixelsPrestoConfig config = new PixelsPrestoConfig().setPixelsConfig("");
         HDFS hdfs = (HDFS) StorageFactory.Instance().getStorage("hdfs");
         List<LocatedBlock> allBlocks = listLocatedBlocks(hdfs.getFileSystem(), filePath);
@@ -84,7 +84,7 @@ public class TestHdfs {
     public void testDistribute() throws IOException
     {
         PixelsPrestoConfig config = new PixelsPrestoConfig().setPixelsConfig("");
-        String hdfsDir = "hdfs://dbiir01:9000/pixels/pixels/test_105/v_0_order";
+        String hdfsDir = "hdfs://node:9000/pixels/pixels/test_105/v_0_order";
         HDFS hdfs = (HDFS) StorageFactory.Instance().getStorage("hdfs");
         List<String> hdfsList = hdfs.listPaths(hdfsDir);
         Map<String, Integer> hostMap = new HashMap<>();
@@ -115,7 +115,7 @@ public class TestHdfs {
     public void testDistributeByFirst() throws IOException
     {
         PixelsPrestoConfig config = new PixelsPrestoConfig().setPixelsConfig("");
-        String hdfsDir = "hdfs://dbiir01:9000/pixels/pixels/test_105/v_2_order";
+        String hdfsDir = "hdfs://node01:9000/pixels/pixels/test_105/v_2_order";
         HDFS hdfs = (HDFS) StorageFactory.Instance().getStorage("hdfs");
         List<String> hdfsList = hdfs.listPaths(hdfsDir);
         Map<String, Integer> hostMap = new HashMap<>();
@@ -155,8 +155,7 @@ public class TestHdfs {
     @Test
     public void testGetFileBlocks() throws IOException
     {
-        PixelsPrestoConfig config = new PixelsPrestoConfig().setPixelsConfig("");
-        String hdfsDir = "hdfs://dbiir01:9000/pixels/pixels/test_105/v_2_order/201809231217552.pxl";
+        String hdfsDir = "hdfs://node01:9000/pixels/pixels/test_105/v_2_order/201809231217552.pxl";
         HDFS hdfs = (HDFS) StorageFactory.Instance().getStorage("hdfs");
         List<LocatedBlock> blocks = listLocatedBlocks(hdfs.getFileSystem(), hdfsDir);
         for (LocatedBlock block : blocks) {

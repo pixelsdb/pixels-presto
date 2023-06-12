@@ -59,6 +59,8 @@ import static com.facebook.presto.common.type.RealType.REAL;
 import static com.facebook.presto.common.type.SmallintType.SMALLINT;
 import static com.facebook.presto.common.type.TinyintType.TINYINT;
 import static com.google.common.base.Preconditions.checkArgument;
+import static io.pixelsdb.pixels.presto.properties.PixelsTableProperties.PATHS;
+import static io.pixelsdb.pixels.presto.properties.PixelsTableProperties.STORAGE;
 import static java.lang.Float.intBitsToFloat;
 import static java.lang.Math.toIntExact;
 import static java.util.Objects.requireNonNull;
@@ -427,12 +429,41 @@ public class PixelsMetadata
         SchemaTableName schemaTableName = tableMetadata.getTable();
         String schemaName = schemaTableName.getSchemaName();
         String tableName = schemaTableName.getTableName();
-        String storageScheme = ((String) Optional.ofNullable(tableMetadata.getProperties().get("storage"))
-                .orElse("hdfs")).toLowerCase(); // use HDFS by default.
-        if (!Storage.Scheme.isValid(storageScheme))
+        String storage = (String) tableMetadata.getProperties().get(STORAGE);
+        String paths = (String) tableMetadata.getProperties().get(PATHS);
+        if (storage == null)
         {
-            throw new PrestoException(PixelsErrorCode.PIXELS_METASTORE_ERROR,
-                    "Unsupported storage scheme '" + storageScheme + "'.");
+            throw new PrestoException(PixelsErrorCode.PIXELS_QUERY_PARSING_ERROR,
+                    "Table must be created with the property 'storage'.");
+        }
+        if (paths == null)
+        {
+            throw new PrestoException(PixelsErrorCode.PIXELS_QUERY_PARSING_ERROR,
+                    "Table must be created with the property 'paths'.");
+        }
+        if (!Storage.Scheme.isValid(storage))
+        {
+            throw new PrestoException(PixelsErrorCode.PIXELS_QUERY_PARSING_ERROR,
+                    "Unsupported storage scheme '" + storage + "'.");
+        }
+        Storage.Scheme storageScheme = Storage.Scheme.from(storage);
+        String[] basePathUris = paths.split(";");
+        for (int i = 0; i < basePathUris.length; ++i)
+        {
+            Storage.Scheme scheme = Storage.Scheme.fromPath(basePathUris[i]);
+            if (scheme == null)
+            {
+                basePathUris[i] = storageScheme + "://" + basePathUris[i];
+            }
+            if (scheme != storageScheme)
+            {
+                throw new PrestoException(PixelsErrorCode.PIXELS_QUERY_PARSING_ERROR,
+                        "The storage schemes in 'paths' are inconsistent with 'storage'.");
+            }
+            if (!basePathUris[i].endsWith("/"))
+            {
+                basePathUris[i] = basePathUris[i] + "/";
+            }
         }
         List<Column> columns = new ArrayList<>();
         for (ColumnMetadata columnMetadata : tableMetadata.getColumns())
@@ -448,8 +479,9 @@ public class PixelsMetadata
         }
         try
         {
-            boolean res = this.metadataProxy.createTable(schemaName, tableName, storageScheme, columns);
-            if (res == false && ignoreExisting == false)
+            boolean res = this.metadataProxy.createTable(schemaName, tableName, storageScheme,
+                    Arrays.asList(basePathUris), columns);
+            if (!res && !ignoreExisting)
             {
                 throw  new PrestoException(PixelsErrorCode.PIXELS_SQL_EXECUTE_ERROR,
                         "Table '" + schemaTableName + "' might already exist, failed to create it.");
@@ -470,7 +502,7 @@ public class PixelsMetadata
         try
         {
             boolean res = this.metadataProxy.dropTable(schemaName, tableName);
-            if (res == false)
+            if (!res)
             {
                 throw  new PrestoException(PixelsErrorCode.PIXELS_SQL_EXECUTE_ERROR,
                         "Table " + schemaName + "." + tableName + " does not exist.");
