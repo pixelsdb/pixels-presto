@@ -59,6 +59,8 @@ import static com.facebook.presto.common.type.RealType.REAL;
 import static com.facebook.presto.common.type.SmallintType.SMALLINT;
 import static com.facebook.presto.common.type.TinyintType.TINYINT;
 import static com.google.common.base.Preconditions.checkArgument;
+import static io.pixelsdb.pixels.presto.properties.PixelsTableProperties.PATHS;
+import static io.pixelsdb.pixels.presto.properties.PixelsTableProperties.STORAGE;
 import static java.lang.Float.intBitsToFloat;
 import static java.lang.Math.toIntExact;
 import static java.util.Objects.requireNonNull;
@@ -427,8 +429,8 @@ public class PixelsMetadata
         SchemaTableName schemaTableName = tableMetadata.getTable();
         String schemaName = schemaTableName.getSchemaName();
         String tableName = schemaTableName.getTableName();
-        String storage = (String) tableMetadata.getProperties().get("storage");
-        String paths = (String) tableMetadata.getProperties().get("paths");
+        String storage = (String) tableMetadata.getProperties().get(STORAGE);
+        String paths = (String) tableMetadata.getProperties().get(PATHS);
         if (storage == null)
         {
             throw new PrestoException(PixelsErrorCode.PIXELS_QUERY_PARSING_ERROR,
