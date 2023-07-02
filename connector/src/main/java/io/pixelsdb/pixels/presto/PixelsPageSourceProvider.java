@@ -164,9 +164,8 @@ public class PixelsPageSourceProvider
         scanInput.setTableInfo(tableInfo);
         scanInput.setScanProjection(projection);
         // logger.info("table scan filter: " + tableInfo.getFilter());
-        String folder = config.getOutputFolderForQuery(inputSplit.getTransId());
-        OutputInfo outputInfo = new OutputInfo(folder, true,
-                config.getOutputStorageInfo(), true);
+        String folder = config.getOutputFolderForQuery(inputSplit.getTransId()) + inputSplit.getSplitId() + "/";
+        OutputInfo outputInfo = new OutputInfo(folder, config.getOutputStorageInfo(), true);
         scanInput.setOutput(outputInfo);
 
         return InvokerFactory.Instance().getInvoker(WorkerType.SCAN)

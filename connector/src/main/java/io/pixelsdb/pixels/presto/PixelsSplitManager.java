@@ -235,6 +235,7 @@ public class PixelsSplitManager
             }
             logger.debug("using compact paths: " + compactPaths);
 
+            long splitId = 0;
             if(usingCache)
             {
                 Compact compact = layout.getCompact();
@@ -292,7 +293,7 @@ public class PixelsSplitManager
                                             storage.getLocations(orderedFilePaths.get(firstPath)));
 
                                     PixelsSplit pixelsSplit = new PixelsSplit(
-                                            transHandle.getTransId(), connectorId,
+                                            transHandle.getTransId(), splitId++, connectorId,
                                             tableHandle.getSchemaName(), tableHandle.getTableName(),
                                             table.getStorageScheme().name(), paths,
                                             Collections.nCopies(paths.size(), 0),
@@ -331,7 +332,7 @@ public class PixelsSplitManager
                                         }
 
                                         PixelsSplit pixelsSplit = new PixelsSplit(
-                                                transHandle.getTransId(), connectorId,
+                                                transHandle.getTransId(), splitId++, connectorId,
                                                 tableHandle.getSchemaName(), tableHandle.getTableName(),
                                                 table.getStorageScheme().name(), Arrays.asList(path),
                                                 Arrays.asList(curFileRGIdx), Arrays.asList(splitSize),
@@ -390,7 +391,7 @@ public class PixelsSplitManager
                                     storage.getLocations(orderedFilePaths.get(firstPath)));
 
                             PixelsSplit pixelsSplit = new PixelsSplit(
-                                    transHandle.getTransId(), connectorId,
+                                    transHandle.getTransId(), splitId++, connectorId,
                                     tableHandle.getSchemaName(), tableHandle.getTableName(),
                                     table.getStorageScheme().name(), paths,
                                     Collections.nCopies(paths.size(), 0),
@@ -415,7 +416,7 @@ public class PixelsSplitManager
                                 List<HostAddress> compactAddresses = toHostAddresses(storage.getLocations(path));
 
                                 PixelsSplit pixelsSplit = new PixelsSplit(
-                                        transHandle.getTransId(), connectorId,
+                                        transHandle.getTransId(), splitId++, connectorId,
                                         tableHandle.getSchemaName(), tableHandle.getTableName(),
                                         table.getStorageScheme().name(), Arrays.asList(path),
                                         Arrays.asList(curFileRGIdx), Arrays.asList(splitSize),
