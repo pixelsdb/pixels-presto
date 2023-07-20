@@ -154,8 +154,7 @@ public class PixelsMetadata
         PixelsTableHandle tableHandle = (PixelsTableHandle) table;
         PixelsTableLayoutHandle tableLayout = new PixelsTableLayoutHandle(tableHandle);
         tableLayout.setConstraint(constraint.getSummary());
-        if(desiredColumns.isPresent())
-            tableLayout.setDesiredColumns(desiredColumns.get());
+        desiredColumns.ifPresent(tableLayout::setDesiredColumns);
         ConnectorTableLayout layout = getTableLayout(session, tableLayout);
         return ImmutableList.of(new ConnectorTableLayoutResult(layout, constraint.getSummary()));
     }
