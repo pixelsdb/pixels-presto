@@ -124,8 +124,17 @@ public class PixelsMetadata
         requireNonNull(tableName, "tableName is null");
         try
         {
-            if (this.metadataProxy.existTable(tableName.getSchemaName(), tableName.getTableName()))
+            if (metadataProxy.existTable(tableName.getSchemaName(), tableName.getTableName()))
             {
+                /*
+                 * Issue #485:
+                 * This is the first methods to be called for a table accessed by a query.
+                 * So we refresh the cache for the table here. All the following operations during query parsing
+                 * and query planning can directly get the table's metadata from the metadata cache, without sending
+                 * duplicated requests to pixels metadata server.
+                 */
+                this.metadataProxy.refreshCachedTableAndColumns(tableName.getSchemaName(), tableName.getTableName());
+
                 PixelsTableHandle tableHandle = new PixelsTableHandle(
                         connectorId, tableName.getSchemaName(), tableName.getTableName(), "");
                 return tableHandle;
@@ -171,7 +180,7 @@ public class PixelsMetadata
         List<PixelsColumnHandle> columnHandleList;
         try
         {
-            columnHandleList = metadataProxy.getTableColumn(connectorId, schemaName, tableName);
+            columnHandleList = metadataProxy.getTableColumns(connectorId, schemaName, tableName);
         } catch (MetadataException e)
         {
             throw new PrestoException(PixelsErrorCode.PIXELS_METASTORE_ERROR, e);
@@ -363,7 +372,7 @@ public class PixelsMetadata
         List<PixelsColumnHandle> columnHandleList = null;
         try
         {
-            columnHandleList = metadataProxy.getTableColumn(
+            columnHandleList = metadataProxy.getTableColumns(
                     connectorId, pixelsTableHandle.getSchemaName(), pixelsTableHandle.getTableName());
         } catch (MetadataException e)
         {
