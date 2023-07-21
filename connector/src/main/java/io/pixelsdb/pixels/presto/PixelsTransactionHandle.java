@@ -25,7 +25,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 
 /**
  * @author hank
- * Finished at: 20/02/2022
+ * @create 2022-02-20
  */
 public class PixelsTransactionHandle
         implements ConnectorTransactionHandle

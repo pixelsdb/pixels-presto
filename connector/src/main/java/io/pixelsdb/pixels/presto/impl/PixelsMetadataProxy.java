@@ -42,7 +42,8 @@ import java.util.List;
 import static java.util.Objects.requireNonNull;
 
 /**
- * Created by hank on 18-6-18.
+ * @author hank
+ * @create 2018-06-18
  */
 public class PixelsMetadataProxy
 {

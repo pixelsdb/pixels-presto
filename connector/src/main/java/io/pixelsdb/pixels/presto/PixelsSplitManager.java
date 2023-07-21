@@ -65,11 +65,11 @@ import static java.util.stream.Collectors.toSet;
  * @author hank
  * @author guodong
  * @author tao
- * @date 2018-01-20 19:16
+ * @create 2018-01-20 19:16
  */
 @SuppressWarnings("Duplicates")
-public class PixelsSplitManager
-        implements ConnectorSplitManager {
+public class PixelsSplitManager implements ConnectorSplitManager
+{
     private static final Logger logger = Logger.get(PixelsSplitManager.class);
     private final String connectorId;
     private final PixelsMetadataProxy metadataProxy;
@@ -82,7 +82,8 @@ public class PixelsSplitManager
     private final int fixedSplitSize;
 
     @Inject
-    public PixelsSplitManager(PixelsConnectorId connectorId, PixelsMetadataProxy metadataProxy, PixelsPrestoConfig config) {
+    public PixelsSplitManager(PixelsConnectorId connectorId, PixelsMetadataProxy metadataProxy, PixelsPrestoConfig config)
+    {
         this.connectorId = requireNonNull(connectorId, "connectorId is null").toString();
         this.metadataProxy = requireNonNull(metadataProxy, "metadataProxy is null");
         this.config = requireNonNull(config, "config is null");

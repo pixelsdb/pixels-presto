@@ -29,7 +29,7 @@ import java.util.List;
 
 /**
  * @author: tao
- * @date: Create in 2018-01-27 11:15
+ * @create 2018-01-27 11:15
  **/
 public class testPixelsMetadataProxy
 {
