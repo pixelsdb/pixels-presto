@@ -56,7 +56,6 @@ public class PixelsModule
         binder.bind(PixelsConnector.class).in(Scopes.SINGLETON);
         binder.bind(PixelsConnectorId.class).toInstance(new PixelsConnectorId(connectorId));
         binder.bind(PixelsTypeParser.class).in(Scopes.SINGLETON);
-        binder.bind(PixelsMetadata.class).in(Scopes.SINGLETON);
         binder.bind(PixelsMetadataProxy.class).in(Scopes.SINGLETON);
         binder.bind(PixelsSplitManager.class).in(Scopes.SINGLETON);
         binder.bind(PixelsPageSourceProvider.class).in(Scopes.SINGLETON);

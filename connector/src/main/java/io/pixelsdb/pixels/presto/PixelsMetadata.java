@@ -20,7 +20,6 @@
 package io.pixelsdb.pixels.presto;
 
 import com.facebook.airlift.log.Logger;
-import com.facebook.presto.spi.statistics.DoubleRange;
 import com.facebook.presto.common.type.DecimalType;
 import com.facebook.presto.common.type.TimestampType;
 import com.facebook.presto.common.type.TimestampWithTimeZoneType;
@@ -28,6 +27,7 @@ import com.facebook.presto.common.type.Type;
 import com.facebook.presto.spi.*;
 import com.facebook.presto.spi.connector.ConnectorMetadata;
 import com.facebook.presto.spi.statistics.ColumnStatistics;
+import com.facebook.presto.spi.statistics.DoubleRange;
 import com.facebook.presto.spi.statistics.Estimate;
 import com.facebook.presto.spi.statistics.TableStatistics;
 import com.google.common.collect.ImmutableList;
@@ -44,7 +44,6 @@ import io.pixelsdb.pixels.core.stats.StatsRecorder;
 import io.pixelsdb.pixels.presto.exception.PixelsErrorCode;
 import io.pixelsdb.pixels.presto.impl.PixelsMetadataProxy;
 
-import javax.inject.Inject;
 import java.nio.ByteBuffer;
 import java.util.*;
 
@@ -79,12 +78,14 @@ public class PixelsMetadata
     private final String connectorId;
 
     private final PixelsMetadataProxy metadataProxy;
+    private final PixelsTransactionHandle transHandle;
 
-    @Inject
-    public PixelsMetadata(PixelsConnectorId connectorId, PixelsMetadataProxy metadataProxy)
+    public PixelsMetadata(PixelsConnectorId connectorId, PixelsMetadataProxy metadataProxy,
+                          PixelsTransactionHandle transHandle)
     {
         this.connectorId = requireNonNull(connectorId, "connectorId is null").toString();
         this.metadataProxy = requireNonNull(metadataProxy, "metadataProxy is null");
+        this.transHandle = requireNonNull(transHandle, "transHandle is null");
     }
 
     @Override
@@ -133,7 +134,8 @@ public class PixelsMetadata
                  * and query planning can directly get the table's metadata from the metadata cache, without sending
                  * duplicated requests to pixels metadata server.
                  */
-                this.metadataProxy.refreshCachedTableAndColumns(tableName.getSchemaName(), tableName.getTableName());
+                this.metadataProxy.refreshCachedTableAndColumns(
+                        this.transHandle.getTransId(), tableName.getSchemaName(), tableName.getTableName());
 
                 PixelsTableHandle tableHandle = new PixelsTableHandle(
                         connectorId, tableName.getSchemaName(), tableName.getTableName(), "");
@@ -179,7 +181,7 @@ public class PixelsMetadata
         List<PixelsColumnHandle> columnHandleList;
         try
         {
-            columnHandleList = metadataProxy.getTableColumns(connectorId, schemaName, tableName);
+            columnHandleList = metadataProxy.getTableColumns(connectorId, transHandle.getTransId(), schemaName, tableName);
         } catch (MetadataException e)
         {
             throw new PrestoException(PixelsErrorCode.PIXELS_METASTORE_ERROR, e);
@@ -198,7 +200,8 @@ public class PixelsMetadata
         PixelsTableHandle tableHandle = (PixelsTableHandle) table;
         List<PixelsColumnHandle> pixelsColumns = columnHandles.stream()
                 .map(PixelsColumnHandle.class::cast).collect(toList());
-        List<Column> columns = metadataProxy.getColumnStatistics(tableHandle.getSchemaName(), tableHandle.getTableName());
+        List<Column> columns = metadataProxy.getColumnStatistics(
+                transHandle.getTransId(), tableHandle.getSchemaName(), tableHandle.getTableName());
         requireNonNull(columns, "columns is null");
         Map<String, Column> columnMap = new HashMap<>(columns.size());
         for (Column column : columns)
@@ -208,7 +211,8 @@ public class PixelsMetadata
 
         try
         {
-            long rowCount = metadataProxy.getTable(tableHandle.getSchemaName(), tableHandle.getTableName()).getRowCount();
+            long rowCount = metadataProxy.getTable(
+                    transHandle.getTransId(), tableHandle.getSchemaName(), tableHandle.getTableName()).getRowCount();
             tableStatBuilder.setRowCount(Estimate.of(rowCount));
             logger.debug("table '" + tableHandle.getTableName() + "' row count: " + rowCount);
         } catch (MetadataException e)
@@ -371,8 +375,8 @@ public class PixelsMetadata
         List<PixelsColumnHandle> columnHandleList = null;
         try
         {
-            columnHandleList = metadataProxy.getTableColumns(
-                    connectorId, pixelsTableHandle.getSchemaName(), pixelsTableHandle.getTableName());
+            columnHandleList = metadataProxy.getTableColumns(connectorId, transHandle.getTransId(),
+                    pixelsTableHandle.getSchemaName(), pixelsTableHandle.getTableName());
         } catch (MetadataException e)
         {
             throw new PrestoException(PixelsErrorCode.PIXELS_METASTORE_ERROR, e);

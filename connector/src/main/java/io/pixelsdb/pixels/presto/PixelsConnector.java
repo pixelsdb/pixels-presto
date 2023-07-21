@@ -29,6 +29,7 @@ import io.pixelsdb.pixels.common.exception.TransException;
 import io.pixelsdb.pixels.common.transaction.TransContext;
 import io.pixelsdb.pixels.common.transaction.TransService;
 import io.pixelsdb.pixels.presto.exception.PixelsErrorCode;
+import io.pixelsdb.pixels.presto.impl.PixelsMetadataProxy;
 import io.pixelsdb.pixels.presto.impl.PixelsPrestoConfig;
 import io.pixelsdb.pixels.presto.properties.PixelsSessionProperties;
 import io.pixelsdb.pixels.presto.properties.PixelsTableProperties;
@@ -42,8 +43,9 @@ public class PixelsConnector
         implements Connector {
     private static final Logger logger = Logger.get(PixelsConnector.class);
 
+    private final PixelsConnectorId connectorId;
     private final LifeCycleManager lifeCycleManager;
-    private final PixelsMetadata metadata;
+    private final PixelsMetadataProxy metadataProxy;
     private final PixelsSplitManager splitManager;
     private final boolean recordCursorEnabled;
     private final PixelsPageSourceProvider pageSourceProvider;
@@ -55,16 +57,19 @@ public class PixelsConnector
 
     @Inject
     public PixelsConnector(
+            PixelsConnectorId connectorId,
             LifeCycleManager lifeCycleManager,
-            PixelsMetadata metadata,
+            PixelsMetadataProxy metadataProxy,
             PixelsSplitManager splitManager,
             PixelsPrestoConfig config,
             PixelsPageSourceProvider pageSourceProvider,
             PixelsRecordSetProvider recordSetProvider,
             PixelsSessionProperties sessionProperties,
-            PixelsTableProperties tableProperties) {
+            PixelsTableProperties tableProperties)
+    {
+        this.connectorId = requireNonNull(connectorId, "connectorId is null");
         this.lifeCycleManager = requireNonNull(lifeCycleManager, "lifeCycleManager is null");
-        this.metadata = requireNonNull(metadata, "metadata is null");
+        this.metadataProxy = requireNonNull(metadataProxy, "metadataProxy is null");
         this.splitManager = requireNonNull(splitManager, "splitManager is null");
         this.pageSourceProvider = requireNonNull(pageSourceProvider, "recordSetProvider is null");
         this.recordSetProvider = requireNonNull(recordSetProvider, "recordSetProvider is null");
@@ -157,12 +162,15 @@ public class PixelsConnector
     }
 
     @Override
-    public ConnectorMetadata getMetadata(ConnectorTransactionHandle transactionHandle) {
-        return metadata;
+    public ConnectorMetadata getMetadata(ConnectorTransactionHandle transHandle)
+    {
+        PixelsTransactionHandle pixelsTransHandle = (PixelsTransactionHandle) transHandle;
+        return new PixelsMetadata(this.connectorId, this.metadataProxy, pixelsTransHandle);
     }
 
     @Override
-    public ConnectorSplitManager getSplitManager() {
+    public ConnectorSplitManager getSplitManager()
+    {
         return splitManager;
     }
 
@@ -170,7 +178,8 @@ public class PixelsConnector
      * @throws UnsupportedOperationException if this connector does not support reading tables page at a time
      */
     @Override
-    public PixelsPageSourceProvider getPageSourceProvider() {
+    public PixelsPageSourceProvider getPageSourceProvider()
+    {
         if (this.recordCursorEnabled)
         {
             throw new UnsupportedOperationException();
@@ -192,10 +201,13 @@ public class PixelsConnector
     }
 
     @Override
-    public final void shutdown() {
-        try {
+    public final void shutdown()
+    {
+        try
+        {
             lifeCycleManager.stop();
-        } catch (Exception e) {
+        } catch (Exception e)
+        {
             logger.error(e, "error in shutting down connector");
             throw new PrestoException(PixelsErrorCode.PIXELS_CONNECTOR_ERROR, e);
         }
