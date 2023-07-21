@@ -67,7 +67,7 @@ public class TestISplitSplitsIndex
             splitPatterns.add(splitPattern);
         }
         workloadReader.close();
-        SplitsIndex splitsIndex = new InvertedSplitsIndex(columnOrder, splitPatterns, 16);
+        SplitsIndex splitsIndex = new InvertedSplitsIndex(0L, columnOrder, splitPatterns, 16);
         IndexFactory.Instance().cacheSplitsIndex(entry, splitsIndex);
         splitsIndex = IndexFactory.Instance().getSplitsIndex(new SchemaTableName("test", "t1"));
         ColumnSet columnSet = new ColumnSet();
@@ -98,7 +98,7 @@ public class TestISplitSplitsIndex
             }
             else
             {
-                int indexVersion = index.getVersion();
+                long indexVersion = index.getVersion();
                 if (indexVersion < version) {
                     index = getInverted(ordered, splits, schemaTableName);
                 }
@@ -138,10 +138,11 @@ public class TestISplitSplitsIndex
         metadataService.shutdown();
     }
 
-    private InvertedSplitsIndex getInverted(Ordered ordered, Splits splits, SchemaTableName schemaTableName) {
+    private InvertedSplitsIndex getInverted(Ordered ordered, Splits splits, SchemaTableName schemaTableName)
+    {
         List<String> columnOrder = ordered.getColumnOrder();
         InvertedSplitsIndex index;
-        index = new InvertedSplitsIndex(columnOrder, SplitPattern.buildPatterns(columnOrder, splits), splits.getNumRowGroupInFile());
+        index = new InvertedSplitsIndex(0L, columnOrder, SplitPattern.buildPatterns(columnOrder, splits), splits.getNumRowGroupInFile());
         IndexFactory.Instance().cacheSplitsIndex(schemaTableName, index);
         return index;
     }

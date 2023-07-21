@@ -38,7 +38,7 @@ import java.io.IOException;
  *
  * @author tao
  * @author hank
- * @date 2018-01-20 11:16
+ * @create 2018-01-20 11:16
  **/
 public class PixelsPrestoConfig
 {

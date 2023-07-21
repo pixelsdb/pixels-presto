@@ -29,7 +29,7 @@ import java.util.List;
 
 /**
  * @author: tao
- * @date: Create in 2018-01-27 11:15
+ * @create 2018-01-27 11:15
  **/
 public class testPixelsMetadataProxy
 {
@@ -61,7 +61,7 @@ public class testPixelsMetadataProxy
     @Test
     public void getTable() throws MetadataException
     {
-        Table table = pixelsMetadataProxy.getTable("default", "test");
+        Table table = pixelsMetadataProxy.getTable(0L, "default", "test");
         System.out.println(table.getName());
         System.out.println(table.getType());
         System.out.println(table.getStorageScheme());

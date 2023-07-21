@@ -42,14 +42,14 @@ import java.util.List;
 import static java.util.Objects.requireNonNull;
 
 /**
- * Created by hank on 18-6-18.
+ * @author hank
+ * @create 2018-06-18
  */
 public class PixelsMetadataProxy
 {
     private static final Logger log = Logger.get(PixelsMetadataProxy.class);
     private final MetadataService metadataService;
     private final PixelsTypeParser typeParser;
-    private final MetadataCache metadataCache = MetadataCache.Instance();
 
     @Inject
     public PixelsMetadataProxy(PixelsPrestoConfig config, PixelsTypeParser typeParser)
@@ -71,6 +71,11 @@ public class PixelsMetadataProxy
                         "Failed to shutdown metadata service (client).");
             }
         }));
+    }
+
+    public MetadataService getMetadataService()
+    {
+        return metadataService;
     }
 
     public List<String> getSchemaNames() throws MetadataException
@@ -103,9 +108,37 @@ public class PixelsMetadataProxy
         return viewList;
     }
 
-    public Table getTable(String schemaName, String tableName) throws MetadataException
+    /**
+     * This method should be called when the query firstly accesses the metadata of the table and the
+     * table's columns. It gets the latest metadata of the table and columns from pixels metadata server
+     * and refreshes the metadata cache. This method is idempotent, additional calls are no-ops.
+     *
+     * <p>The metadata cache isolates the cached metadata for each transaction. Thus concurrent queries
+     * do not interfere with each other. The cached metadata is dropped when the transaction terminates.</p>
+     *
+     * @param transId  the transaction id
+     * @param schemaName the schema name of the table
+     * @param tableName the table name of the table
+     * @throws MetadataException
+     */
+    public void refreshCachedTableAndColumns(long transId, String schemaName, String tableName) throws MetadataException
     {
-        return metadataService.getTable(schemaName, tableName);
+        SchemaTableName schemaTableName = new SchemaTableName(schemaName, tableName);
+        if (!MetadataCache.Instance().isTableCached(transId, schemaTableName))
+        {
+            Table table = metadataService.getTable(schemaName, tableName);
+            MetadataCache.Instance().cacheTable(transId, schemaTableName, table);
+        }
+        if (!MetadataCache.Instance().isTableColumnsCached(transId, schemaTableName))
+        {
+            List<Column> columnsList = metadataService.getColumns(schemaName, tableName, true);
+            MetadataCache.Instance().cacheTableColumns(transId, schemaTableName, columnsList);
+        }
+    }
+
+    public Table getTable(long transId, String schemaName, String tableName) throws MetadataException
+    {
+        return MetadataCache.Instance().getTable(transId, new SchemaTableName(schemaName, tableName));
     }
 
     public TypeDescription parsePixelsType(Type type)
@@ -113,13 +146,14 @@ public class PixelsMetadataProxy
         return typeParser.parsePixelsType(type.getDisplayName());
     }
 
-    public List<PixelsColumnHandle> getTableColumn(String connectorId, String schemaName, String tableName) throws MetadataException
+    public List<PixelsColumnHandle> getTableColumns(
+            String connectorId, long transId, String schemaName, String tableName) throws MetadataException
     {
         ImmutableList.Builder<PixelsColumnHandle> columnsBuilder = ImmutableList.builder();
-        List<Column> columnsList = metadataService.getColumns(schemaName, tableName, true);
-        SchemaTableName schemaTableName = new SchemaTableName(schemaName, tableName);
-        this.metadataCache.cacheTableColumns(schemaTableName, columnsList);
-        for (int i = 0; i < columnsList.size(); i++) {
+        List<Column> columnsList = MetadataCache.Instance().getTableColumns(
+                transId, new SchemaTableName(schemaName, tableName));
+        for (int i = 0; i < columnsList.size(); i++)
+        {
             Column c = columnsList.get(i);
             Type prestoType = typeParser.parsePrestoType(c.getType());
             TypeDescription pixelsType = typeParser.parsePixelsType(c.getType());
@@ -136,9 +170,9 @@ public class PixelsMetadataProxy
         return columnsBuilder.build();
     }
 
-    public List<Column> getColumnStatistics(String schemaName, String tableName)
+    public List<Column> getColumnStatistics(long transId, String schemaName, String tableName)
     {
-        return this.metadataCache.getTableColumns(new SchemaTableName(schemaName, tableName));
+        return MetadataCache.Instance().getTableColumns(transId, new SchemaTableName(schemaName, tableName));
     }
 
     public List<Layout> getDataLayouts (String schemaName, String tableName) throws MetadataException

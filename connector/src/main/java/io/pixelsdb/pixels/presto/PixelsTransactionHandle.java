@@ -25,7 +25,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 
 /**
  * @author hank
- * Finished at: 20/02/2022
+ * @create 2022-02-20
  */
 public class PixelsTransactionHandle
         implements ConnectorTransactionHandle
@@ -33,7 +33,7 @@ public class PixelsTransactionHandle
     public static final PixelsTransactionHandle Default = new PixelsTransactionHandle(-1, -1);
 
     /**
-     * transId is also the query id, as each query is a single-statement read-only transaction.
+     * transId is the transaction id of the query, which is a single-statement read-only transaction.
      */
     private final long transId;
     /**
@@ -43,7 +43,7 @@ public class PixelsTransactionHandle
 
     /**
      * Create a transaction handle.
-     * @param transId is also the query id as a query is a single-statement read-only transaction.
+     * @param transId the transaction id of the query, which is a single-statement read-only transaction.
      * @param timestamp the timestamp of a transaction.
      */
     @JsonCreator

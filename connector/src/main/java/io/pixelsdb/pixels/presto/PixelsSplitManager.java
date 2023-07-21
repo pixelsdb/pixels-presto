@@ -65,14 +65,15 @@ import static java.util.stream.Collectors.toSet;
  * @author hank
  * @author guodong
  * @author tao
- * @date 2018-01-20 19:16
+ * @create 2018-01-20 19:16
  */
 @SuppressWarnings("Duplicates")
-public class PixelsSplitManager
-        implements ConnectorSplitManager {
+public class PixelsSplitManager implements ConnectorSplitManager
+{
     private static final Logger logger = Logger.get(PixelsSplitManager.class);
     private final String connectorId;
     private final PixelsMetadataProxy metadataProxy;
+    private final PixelsPrestoConfig config;
     private final boolean cacheEnabled;
     private final boolean multiSplitForOrdered;
     private final boolean projectionReadEnabled;
@@ -81,9 +82,11 @@ public class PixelsSplitManager
     private final int fixedSplitSize;
 
     @Inject
-    public PixelsSplitManager(PixelsConnectorId connectorId, PixelsMetadataProxy metadataProxy, PixelsPrestoConfig config) {
+    public PixelsSplitManager(PixelsConnectorId connectorId, PixelsMetadataProxy metadataProxy, PixelsPrestoConfig config)
+    {
         this.connectorId = requireNonNull(connectorId, "connectorId is null").toString();
         this.metadataProxy = requireNonNull(metadataProxy, "metadataProxy is null");
+        this.config = requireNonNull(config, "config is null");
         String cacheEnabled = config.getConfigFactory().getProperty("cache.enabled");
         String projectionReadEnabled = config.getConfigFactory().getProperty("projection.read.enabled");
         String multiSplit = config.getConfigFactory().getProperty("multi.split.for.ordered");
@@ -117,15 +120,17 @@ public class PixelsSplitManager
         List<Layout> layouts;
         try
         {
-            table = metadataProxy.getTable(schemaName, tableName);
+            table = metadataProxy.getTable(transHandle.getTransId(), schemaName, tableName);
             storage = StorageFactory.Instance().getStorage(table.getStorageScheme());
             layouts = metadataProxy.getDataLayouts(schemaName, tableName);
         }
         catch (MetadataException e)
         {
+            logger.error(e, "failed to get table or layouts from metadata");
             throw new PrestoException(PixelsErrorCode.PIXELS_METASTORE_ERROR, e);
         } catch (IOException e)
         {
+            logger.error(e, "failed to get storage for table");
             throw new PrestoException(PixelsErrorCode.PIXELS_STORAGE_ERROR, e);
         }
 
@@ -177,19 +182,25 @@ public class PixelsSplitManager
             {
                 // log.info("columns to be accessed: " + columnSet.toString());
                 SplitsIndex splitsIndex = IndexFactory.Instance().getSplitsIndex(schemaTableName);
-                if (splitsIndex == null)
+                try
                 {
-                    logger.debug("splits index not exist in factory, building index...");
-                    splitsIndex = buildSplitsIndex(order, splits, schemaTableName);
-                }
-                else
-                {
-                    int indexVersion = splitsIndex.getVersion();
-                    if (indexVersion < version)
+                    if (splitsIndex == null)
                     {
-                        logger.debug("splits index version is not up-to-date, updating index...");
-                        splitsIndex = buildSplitsIndex(order, splits, schemaTableName);
+                        logger.debug("splits index not exist in factory, building index...");
+                        splitsIndex = buildSplitsIndex(transHandle.getTransId(), version, order, splits, schemaTableName);
+                    } else
+                    {
+                        long indexVersion = splitsIndex.getVersion();
+                        if (indexVersion < version)
+                        {
+                            logger.debug("splits index version is not up-to-date, updating index...");
+                            splitsIndex = buildSplitsIndex(transHandle.getTransId(), version, order, splits, schemaTableName);
+                        }
                     }
+                } catch (MetadataException e)
+                {
+                    logger.error(e, "failed to build split index");
+                    throw new PrestoException(PixelsErrorCode.PIXELS_METASTORE_ERROR, e);
                 }
                 SplitPattern bestSplitPattern = splitsIndex.search(columnSet);
                 // log.info("bestPattern: " + bestPattern.toString());
@@ -619,16 +630,32 @@ public class PixelsSplitManager
         return addressBuilder.build();
     }
 
-    private SplitsIndex buildSplitsIndex(Ordered ordered, Splits splits, SchemaTableName schemaTableName) {
+    private SplitsIndex buildSplitsIndex(long transId, long version, Ordered ordered,
+                                         Splits splits, SchemaTableName schemaTableName) throws MetadataException
+    {
         List<String> columnOrder = ordered.getColumnOrder();
         SplitsIndex index;
-        index = new InvertedSplitsIndex(columnOrder, SplitPattern.buildPatterns(columnOrder, splits),
-                splits.getNumRowGroupInFile());
+        String indexTypeName = config.getConfigFactory().getProperty("splits.index.type");
+        SplitsIndex.IndexType indexType = SplitsIndex.IndexType.valueOf(indexTypeName.toUpperCase());
+        switch (indexType)
+        {
+            case INVERTED:
+                index = new InvertedSplitsIndex(version, columnOrder, SplitPattern.buildPatterns(columnOrder, splits),
+                        splits.getNumRowGroupInFile());
+                break;
+            case COST_BASED:
+                index = new CostBasedSplitsIndex(transId, version, this.metadataProxy.getMetadataService(),
+                        schemaTableName, splits.getNumRowGroupInFile(), splits.getNumRowGroupInFile());
+                break;
+            default:
+                throw new UnsupportedOperationException("splits index type '" + indexType + "' is not supported");
+        }
         IndexFactory.Instance().cacheSplitsIndex(schemaTableName, index);
         return index;
     }
 
-    private ProjectionsIndex buildProjectionsIndex(Ordered ordered, Projections projections, SchemaTableName schemaTableName) {
+    private ProjectionsIndex buildProjectionsIndex(Ordered ordered, Projections projections, SchemaTableName schemaTableName)
+    {
         List<String> columnOrder = ordered.getColumnOrder();
         ProjectionsIndex index;
         index = new InvertedProjectionsIndex(columnOrder, ProjectionPattern.buildPatterns(columnOrder, projections));
