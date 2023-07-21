@@ -138,7 +138,8 @@ public class TestISplitSplitsIndex
         metadataService.shutdown();
     }
 
-    private InvertedSplitsIndex getInverted(Ordered ordered, Splits splits, SchemaTableName schemaTableName) {
+    private InvertedSplitsIndex getInverted(Ordered ordered, Splits splits, SchemaTableName schemaTableName)
+    {
         List<String> columnOrder = ordered.getColumnOrder();
         InvertedSplitsIndex index;
         index = new InvertedSplitsIndex(0L, columnOrder, SplitPattern.buildPatterns(columnOrder, splits), splits.getNumRowGroupInFile());
