@@ -7,12 +7,12 @@
     <parent>
         <artifactId>pixels</artifactId>
         <groupId>io.pixelsdb</groupId>
-        <version>0.1.0-SNAPSHOT</version>
+        <version>0.1.0</version>
         <relativePath/> <!-- lookup parent from repository -->
     </parent>
 
     <artifactId>pixels-presto</artifactId>
-    <version>0.1.0-SNAPSHOT</version>
+    <version>0.1.0</version>
     <description>Pixels Presto Integration</description>
     <url>https://github.com/pixelsdb/pixels-presto</url>
     <inceptionYear>2018</inceptionYear>
