@@ -110,7 +110,7 @@ public class TestPixelsPredicate
         PixelsTupleDomainPredicate<String> emptyPredicate = new PixelsTupleDomainPredicate<>(emptyEffectivePredicate,
                 columnReferences);
 
-        TypeDescription typeDescription = TypeDescription.createVarchar();
+        TypeDescription typeDescription = TypeDescription.createVarchar(4);
         StatsRecorder statsRecorder = StatsRecorder.create(typeDescription);
         statsRecorder.updateString(TEST_VARCHAR, 1);
         statsRecorder.updateString("", 1);
