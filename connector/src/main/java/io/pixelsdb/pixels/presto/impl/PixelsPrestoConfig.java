@@ -137,17 +137,6 @@ public class PixelsPrestoConfig
             }
         }
 
-        this.inputStorageScheme = Storage.Scheme.from(this.configFactory.getProperty("executor.input.storage.scheme"));
-        this.inputStorageInfo = StorageInfoBuilder.BuildFromConfig(this.inputStorageScheme);
-
-        this.outputStorageScheme = Storage.Scheme.from(this.configFactory.getProperty("executor.output.storage.scheme"));
-        this.outputStorageInfo = StorageInfoBuilder.BuildFromConfig(this.outputStorageScheme);
-        this.outputFolder = this.configFactory.getProperty("executor.output.folder");
-        if (!this.outputFolder.endsWith("/"))
-        {
-            this.outputFolder += "/";
-        }
-
         return this;
     }
 
@@ -170,6 +159,18 @@ public class PixelsPrestoConfig
              * successfully. The detailed reason is to be analyzed.
              */
             InvokerFactory.Instance();
+
+            // PIXELS-TRINO-81: only init input and output storage schemes when serverless workers are enabled.
+            this.inputStorageScheme = Storage.Scheme.from(this.configFactory.getProperty("executor.input.storage.scheme"));
+            this.inputStorageInfo = StorageInfoBuilder.BuildFromConfig(this.inputStorageScheme);
+
+            this.outputStorageScheme = Storage.Scheme.from(this.configFactory.getProperty("executor.output.storage.scheme"));
+            this.outputStorageInfo = StorageInfoBuilder.BuildFromConfig(this.outputStorageScheme);
+            this.outputFolder = this.configFactory.getProperty("executor.output.folder");
+            if (!this.outputFolder.endsWith("/"))
+            {
+                this.outputFolder += "/";
+            }
         }
         return this;
     }
