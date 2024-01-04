@@ -204,33 +204,53 @@ public class PixelsPrestoConfig
         return cleanIntermediateResult;
     }
 
-    @NotNull
     public StorageInfo getInputStorageInfo()
     {
+        if (!this.cloudFunctionEnabled)
+        {
+            throw new PrestoException(PixelsErrorCode.PIXELS_STORAGE_ERROR,
+                    new Throwable("should not use input storage when cloud function is disabled"));
+        }
         return inputStorageInfo;
     }
 
-    @NotNull
     public Storage.Scheme getInputStorageScheme()
     {
+        if (!this.cloudFunctionEnabled)
+        {
+            throw new PrestoException(PixelsErrorCode.PIXELS_STORAGE_ERROR,
+                    new Throwable("should not use input storage when cloud function is disabled"));
+        }
         return inputStorageScheme;
     }
 
-    @NotNull
     public StorageInfo getOutputStorageInfo()
     {
+        if (!this.cloudFunctionEnabled)
+        {
+            throw new PrestoException(PixelsErrorCode.PIXELS_STORAGE_ERROR,
+                    new Throwable("should not use output storage when cloud function is disabled"));
+        }
         return outputStorageInfo;
     }
 
-    @NotNull
     public Storage.Scheme getOutputStorageScheme()
     {
+        if (!this.cloudFunctionEnabled)
+        {
+            throw new PrestoException(PixelsErrorCode.PIXELS_STORAGE_ERROR,
+                    new Throwable("should not use output storage when cloud function is disabled"));
+        }
         return outputStorageScheme;
     }
 
-    @NotNull
     public String getOutputFolderForQuery(long transId)
     {
+        if (!this.cloudFunctionEnabled)
+        {
+            throw new PrestoException(PixelsErrorCode.PIXELS_STORAGE_ERROR,
+                    new Throwable("should not use output storage when cloud function is disabled"));
+        }
         /* Must end with '/', otherwise it will not be considered
          * as a folder in S3-like storage.
          */
