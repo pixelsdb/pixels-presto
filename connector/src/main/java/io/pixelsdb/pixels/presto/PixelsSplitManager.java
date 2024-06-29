@@ -58,6 +58,7 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 
+import static io.pixelsdb.pixels.planner.PixelsPlanner.getFilePaths;
 import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.toSet;
 
@@ -210,7 +211,7 @@ public class PixelsSplitManager implements ConnectorSplitManager
             int rowGroupNum = splits.getNumRowGroupInFile();
 
             // get compact paths
-            String[] compactPaths;
+            List<Path> compactPaths;
             if (projectionReadEnabled)
             {
                 ProjectionsIndex projectionsIndex = IndexFactory.Instance().getProjectionsIndex(schemaTableName);
@@ -233,16 +234,22 @@ public class PixelsSplitManager implements ConnectorSplitManager
                 if (projectionPattern != null)
                 {
                     logger.debug("suitable projection pattern is found");
-                    compactPaths = projectionPattern.getPaths();
+                    long[] projectionPathIds = projectionPattern.getPathIds();
+                    Map<Long, Path> projectionPaths = layout.getProjectionPaths();
+                    compactPaths = new ArrayList<>(projectionPathIds.length);
+                    for (long projectionPathId : projectionPathIds)
+                    {
+                        compactPaths.add(projectionPaths.get(projectionPathId));
+                    }
                 }
                 else
                 {
-                    compactPaths = layout.getCompactPathUris();
+                    compactPaths = layout.getCompactPaths();
                 }
             }
             else
             {
-                compactPaths = layout.getCompactPathUris();
+                compactPaths = layout.getCompactPaths();
             }
             logger.debug("using compact paths: " + compactPaths);
 
@@ -281,7 +288,8 @@ public class PixelsSplitManager implements ConnectorSplitManager
                             // 3. add splits in orderedPaths
                             if (orderedPathEnabled)
                             {
-                                List<String> orderedFilePaths = storage.listPaths(layout.getOrderedPathUris());
+                                List<String> orderedFilePaths = getFilePaths(
+                                        layout.getOrderedPaths(), metadataProxy.getMetadataService());
 
                                 int numPath = orderedFilePaths.size();
                                 for (int i = 0; i < numPath;)
@@ -319,7 +327,8 @@ public class PixelsSplitManager implements ConnectorSplitManager
                             if (compactPathEnabled)
                             {
                                 int curFileRGIdx;
-                                List<String> compactFilePaths = storage.listPaths(compactPaths);
+                                List<String> compactFilePaths = getFilePaths(
+                                        compactPaths, metadataProxy.getMetadataService());
                                 for (String path : compactFilePaths)
                                 {
                                     curFileRGIdx = 0;
@@ -356,7 +365,7 @@ public class PixelsSplitManager implements ConnectorSplitManager
                                 }
                             }
                         }
-                        catch (IOException e)
+                        catch (Exception e)
                         {
                             throw new PrestoException(PixelsErrorCode.PIXELS_STORAGE_ERROR, e);
                         }
@@ -380,7 +389,8 @@ public class PixelsSplitManager implements ConnectorSplitManager
                     // 1. add splits in orderedPaths
                     if (orderedPathEnabled)
                     {
-                        List<String> orderedFilePaths = storage.listPaths(layout.getOrderedPathUris());
+                        List<String> orderedFilePaths = getFilePaths(
+                                layout.getOrderedPaths(), metadataProxy.getMetadataService());
 
                         int numPath = orderedFilePaths.size();
                         for (int i = 0; i < numPath;)
@@ -416,7 +426,8 @@ public class PixelsSplitManager implements ConnectorSplitManager
                     // 2. add splits in compactPaths
                     if (compactPathEnabled)
                     {
-                        List<String> compactFilePaths = storage.listPaths(compactPaths);
+                        List<String> compactFilePaths = getFilePaths(
+                                compactPaths, metadataProxy.getMetadataService());
 
                         int curFileRGIdx;
                         for (String path : compactFilePaths)
@@ -439,7 +450,7 @@ public class PixelsSplitManager implements ConnectorSplitManager
                         }
                     }
                 }
-                catch (IOException e)
+                catch (Exception e)
                 {
                     throw new PrestoException(PixelsErrorCode.PIXELS_STORAGE_ERROR, e);
                 }
