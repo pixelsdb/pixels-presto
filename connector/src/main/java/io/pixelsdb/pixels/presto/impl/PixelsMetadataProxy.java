@@ -30,7 +30,6 @@ import io.pixelsdb.pixels.common.metadata.MetadataService;
 import io.pixelsdb.pixels.common.metadata.SchemaTableName;
 import io.pixelsdb.pixels.common.metadata.domain.*;
 import io.pixelsdb.pixels.common.physical.Storage;
-import io.pixelsdb.pixels.common.utils.ConfigFactory;
 import io.pixelsdb.pixels.core.TypeDescription;
 import io.pixelsdb.pixels.presto.PixelsColumnHandle;
 import io.pixelsdb.pixels.presto.PixelsTypeParser;
@@ -56,21 +55,8 @@ public class PixelsMetadataProxy
     {
         requireNonNull(config, "config is null");
         this.typeParser = requireNonNull(typeParser, "typeParser is null");
-        ConfigFactory configFactory = config.getConfigFactory();
-        String host = configFactory.getProperty("metadata.server.host");
-        int port = Integer.parseInt(configFactory.getProperty("metadata.server.port"));
-        this.metadataService = new MetadataService(host, port);
-        Runtime.getRuntime().addShutdownHook(new Thread( () ->
-        {
-            try
-            {
-                this.metadataService.shutdown();
-            } catch (InterruptedException e)
-            {
-                throw new PrestoException(PixelsErrorCode.PIXELS_METASTORE_ERROR,
-                        "Failed to shutdown metadata service (client).");
-            }
-        }));
+        this.metadataService = MetadataService.Instance();
+        // PIXELS-708: no need to manually shut down the default metadata service.
     }
 
     public MetadataService getMetadataService()
