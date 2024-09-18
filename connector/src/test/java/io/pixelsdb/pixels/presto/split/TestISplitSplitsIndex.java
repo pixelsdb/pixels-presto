@@ -82,7 +82,7 @@ public class TestISplitSplitsIndex
     @Test
     public void testRemote () throws MetadataException, InterruptedException
     {
-        MetadataService metadataService = new MetadataService("node01", 18888);
+        MetadataService metadataService = MetadataService.CreateInstance("node01", 18888);
         List<Layout> layouts = metadataService.getLayouts("pixels", "test_105");
         for (Layout layout : layouts)
         {
