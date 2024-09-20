@@ -135,7 +135,7 @@ public class TestISplitSplitsIndex
             System.out.println(rowGroupNum);
             System.out.println(splitSize);
         }
-        metadataService.shutdown();
+        // PIXELS-715: no need to shut down the default metadata service.
     }
 
     private InvertedSplitsIndex getInverted(Ordered ordered, Splits splits, SchemaTableName schemaTableName)

@@ -78,8 +78,7 @@ public class PixelsConnector implements Connector
         this.config = requireNonNull(config, "config is null");
         requireNonNull(config, "config is null");
         this.recordCursorEnabled = Boolean.parseBoolean(config.getConfigFactory().getProperty("record.cursor.enabled"));
-        this.transService = new TransService(config.getConfigFactory().getProperty("trans.server.host"),
-                Integer.parseInt(config.getConfigFactory().getProperty("trans.server.port")));
+        this.transService = TransService.Instance();
     }
 
     @Override
@@ -206,6 +205,7 @@ public class PixelsConnector implements Connector
         try
         {
             lifeCycleManager.stop();
+            // PIXELS-715: no need to shut down the default transaction service.
         } catch (Exception e)
         {
             logger.error(e, "error in shutting down connector");
