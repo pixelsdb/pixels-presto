@@ -30,6 +30,7 @@ import com.facebook.presto.spi.connector.ConnectorTransactionHandle;
 import com.google.common.collect.ImmutableList;
 import io.airlift.slice.Slice;
 import io.etcd.jetcd.KeyValue;
+import io.pixelsdb.pixels.cache.PixelsCacheUtil;
 import io.pixelsdb.pixels.common.exception.MetadataException;
 import io.pixelsdb.pixels.common.layout.*;
 import io.pixelsdb.pixels.common.metadata.SchemaTableName;
@@ -281,17 +282,22 @@ public class PixelsSplitManager implements ConnectorSplitManager
                 if(keyValue != null)
                 {
                     // 1. get version
-                    cacheVersion = keyValue.getValue().toString(StandardCharsets.UTF_8);
+                    String value = keyValue.getValue().toString(StandardCharsets.UTF_8);
+                    String[] valueSplits = value.split(":");
+                    checkArgument(valueSplits.length == 2, "invalid value for key '" +
+                            Constants.CACHE_VERSION_LITERAL + "' in etcd: " + value);
+                    cacheVersion = valueSplits[1];
                     logger.debug("cache version: " + cacheVersion);
                     // 2. get the cached files of each node
                     List<KeyValue> nodeFiles = etcdUtil.getKeyValuesByPrefix(
                             Constants.CACHE_LOCATION_LITERAL + cacheVersion);
-                    if(nodeFiles.size() > 0)
+                    if(!nodeFiles.isEmpty())
                     {
                         Map<String, String> fileToNodeMap = new HashMap<>();
                         for (KeyValue kv : nodeFiles)
                         {
-                            String node = kv.getKey().toString(StandardCharsets.UTF_8).split("_")[2];
+                            String node = PixelsCacheUtil.getHostnameFromCacheLocationLiteral(
+                                    kv.getKey().toString(StandardCharsets.UTF_8));
                             String[] files = kv.getValue().toString(StandardCharsets.UTF_8).split(";");
                             for(String file : files)
                             {
@@ -389,12 +395,14 @@ public class PixelsSplitManager implements ConnectorSplitManager
                     else
                     {
                         logger.error("Get caching files error when version is " + cacheVersion);
-                        throw new PrestoException(PixelsErrorCode.PIXELS_CACHE_NODE_FILE_ERROR, new CacheException());
+                        throw new PrestoException(PixelsErrorCode.PIXELS_CACHE_NODE_FILE_ERROR,
+                                new CacheException("Get caching files error when version is " + cacheVersion));
                     }
                 }
                 else
                 {
-                    throw new PrestoException(PixelsErrorCode.PIXELS_CACHE_VERSION_ERROR, new CacheException());
+                    throw new PrestoException(PixelsErrorCode.PIXELS_CACHE_VERSION_ERROR,
+                            new CacheException("Failed to get cache version from etcd"));
                 }
             }
             else

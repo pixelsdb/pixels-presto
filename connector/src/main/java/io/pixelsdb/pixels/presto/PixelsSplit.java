@@ -42,8 +42,8 @@ import static java.util.Objects.requireNonNull;
  * @author hank
  * @date 2018-01-20 19:15
  */
-public class PixelsSplit
-        implements ConnectorSplit {
+public class PixelsSplit implements ConnectorSplit
+{
     private final long transId;
     private final long splitId;
     private final String connectorId;
