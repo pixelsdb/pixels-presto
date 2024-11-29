@@ -16,9 +16,10 @@ therefore use `mvn install` to install Pixels modules into your local maven repo
 
 ## Use Pixels in Presto
 
-Ensure that Pixels and other prerequisites are installed following the instructions
-[HERE](https://github.com/pixelsdb/pixels/blob/master/docs/INSTALL.md).
-Instead of installing Trino as the query engine, here we install Presto.
+Follow the instructions in
+[Pixels Installation](https://github.com/pixelsdb/pixels/blob/master/docs/INSTALL.md) to install Pixels and other components except Trino.
+Instead of using Trino as the query engine, here we install Presto and use it to query Pixels.
+Ensure Java 8 is in use as it is required by Presto 0.279.
 
 ### Install Presto
 
@@ -26,10 +27,10 @@ Download and install Presto-0.279 following the instructions in [Presto Docs](ht
 
 Here, we install Presto to `~/opt/presto-server-0.279` and create a link for it:
 ```bash
-ln -s presto-server-0.279 presto-server
+cd ~/opt; ln -s presto-server-0.279 presto-server
 ```
 Then download [presto-cli](https://prestodb.io/docs/0.279/installation/cli.html) into `~/opt/presto-server/bin/`
-and give executable permission to it.
+and give the executable permission to it.
 Some scripts in Presto may require python:
 ```bash
 sudo apt-get install python
@@ -62,23 +63,24 @@ It can be turned on by setting `lambda.enabled` to `true`.
 If `Pixels Turbo Lite` is enabled, we also need to set the following settings in `PIXELS_HOME/pixels.properties`:
 ```properties
 executor.input.storage.scheme=s3
-executor.input.storage.endpoint=input-endpoint-dummy
-executor.input.storage.access.key=input-ak-dummy
-executor.input.storage.secret.key=input-sk-dummy
-executor.output.storage.scheme=s3
-executor.output.storage.endpoint=output-endpoint-dummy
-executor.output.storage.access.key=output-ak-dummy
-executor.output.storage.secret.key=output-sk-dummy
-executor.output.folder=/pixels-lambda-test/
+executor.output.storage.scheme=output-storage-scheme-dummy
+executor.output.folder=output-folder-dummy
 ```
-Those storage schemes, endpoints, and access and secret keys are used to access the input data
+Those storage schemes and folders are used to access the input data
 (the data of the base tables defined by `CREATE TABLE` statements) and the output data 
-(the result of the sub-plan executed in the serverless workers), respectively.
-Ensure that they are valid so that the serverless workers can access the corresponding storage systems.
+(the results of the table scans executed in the serverless workers), respectively.
+Ensure they are valid so that the serverless workers can access the corresponding storage systems.
 Especially, the `executor.input.storage.scheme` must be consistent with the storage scheme of the base
 tables. This is checked during query-planning for Pixels Turbo.
 In addition, the `executor.output.folder` is the base path where the scan output is stored. 
 It also needs to be valid and accessible for the serverless workers.
+If other storage scheme such as `minio` is used, ensure the related properties also configured in `PIXELS_HOME/pixels.properties`:
+```properties
+minio.region=eu-central-2
+minio.endpoint=http://minio-host-dummy:9000
+minio.access.key=minio-access-key-dummy
+minio.secret.key=minio-secret-key-dummy
+```
 
 ### Install Pixels Event Listener*
 Pixels event listener is optional. It is used to collect the query completion information for performance evaluations.
