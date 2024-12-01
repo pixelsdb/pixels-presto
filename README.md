@@ -14,12 +14,20 @@ This project can be opened as a maven project in Intellij and built using maven.
 However, [Pixels](https://github.com/pixelsdb/pixels) is the parent of this project, 
 therefore use `mvn install` to install Pixels modules into your local maven repository before building this project.
 
+After building `pixels-presto`, find the following zip files in the build target directories:
+* `pixels-presto-listener-*.zip`, this is the event listener plugin for Presto.
+* `pixels-presto-connector-*.zip`, this is the connector for Presto.
+
+They will be used in the following steps.
+
+
 ## Use Pixels in Presto
 
 Follow the instructions in
 [Pixels Installation](https://github.com/pixelsdb/pixels/blob/master/docs/INSTALL.md) to install Pixels and other components except Trino.
 Instead of using Trino as the query engine, here we install Presto and use it to query Pixels.
 Ensure Java 8 is in use as it is required by Presto 0.279.
+
 
 ### Install Presto
 
@@ -35,6 +43,7 @@ Some scripts in Presto may require python:
 ```bash
 sudo apt-get install python
 ```
+
 
 ### Install Pixels Connector
 There are two important directories in the home of presto-server: `etc` and `plugin`.
@@ -82,6 +91,7 @@ minio.access.key=minio-access-key-dummy
 minio.secret.key=minio-secret-key-dummy
 ```
 
+
 ### Install Pixels Event Listener*
 Pixels event listener is optional. It is used to collect the query completion information for performance evaluations.
 To install the event listener, decompress `pixels-presto-listener-*.zip` into the `plugin` directory.
@@ -96,6 +106,7 @@ listened.query.type=SELECT
 log.dir=/home/ubuntu/opt/pixels/listener/
 ```
 `log-dir` should point to an existing directory where the listener logs will appear.
+
 
 ### Run Queries
 
