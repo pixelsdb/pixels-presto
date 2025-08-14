@@ -62,8 +62,8 @@ public class PixelsPageSourceProvider
     private static final Logger logger = Logger.get(PixelsPageSourceProvider.class);
 
     private final String connectorId;
-    private final MemoryMappedFile cacheFile;
-    private final MemoryMappedFile indexFile;
+    private final List<MemoryMappedFile> cacheFiles;
+    private final List<MemoryMappedFile> indexFiles;
     private final PixelsFooterCache pixelsFooterCache;
     private final PixelsPrestoConfig config;
 
@@ -78,16 +78,24 @@ public class PixelsPageSourceProvider
         if (config.getConfigFactory().getProperty("cache.enabled").equalsIgnoreCase("true"))
         {
             // NOTICE: creating a MemoryMappedFile is efficient, usually cost tens of us.
-            this.cacheFile = new MemoryMappedFile(
-                    config.getConfigFactory().getProperty("cache.location"),
-                    Long.parseLong(config.getConfigFactory().getProperty("cache.size")));
-            this.indexFile = new MemoryMappedFile(
-                    config.getConfigFactory().getProperty("index.location"),
-                    Long.parseLong(config.getConfigFactory().getProperty("index.size")));
+            int zoneNum = Integer.parseInt(config.getConfigFactory().getProperty("cache.zone.num"));
+            int swapZoneNum = Integer.parseInt(config.getConfigFactory().getProperty("cache.zone.swap.num"));
+            long zoneSize = Long.parseLong(config.getConfigFactory().getProperty("cache.size")) / (zoneNum - swapZoneNum);
+            long zoneIndexSize = Long.parseLong(config.getConfigFactory().getProperty("index.size")) / (zoneNum - swapZoneNum);
+            String zoneLocationPrefix = config.getConfigFactory().getProperty("cache.location");
+            String indexLocationPrefix = config.getConfigFactory().getProperty("index.location");
+            this.cacheFiles = new java.util.ArrayList<>();
+            this.indexFiles = new java.util.ArrayList<>();
+            for (int i = 0; i < zoneNum; i++)
+            {
+                this.cacheFiles.add(new MemoryMappedFile(zoneLocationPrefix + "." + i, zoneSize));
+                this.indexFiles.add(new MemoryMappedFile(indexLocationPrefix + "." + i, zoneIndexSize));
+            }
+            this.indexFiles.add(new MemoryMappedFile(indexLocationPrefix, zoneIndexSize));
         } else
         {
-            this.cacheFile = null;
-            this.indexFile = null;
+            this.cacheFiles = new java.util.ArrayList<>();
+            this.indexFiles = new java.util.ArrayList<>();
         }
         this.pixelsFooterCache = new PixelsFooterCache();
         this.localSplitCounter = new AtomicInteger(0);
@@ -127,7 +135,7 @@ public class PixelsPageSourceProvider
                 Arrays.fill(projection, true);
                 Storage storage = StorageFactory.Instance().getStorage(config.getOutputStorageScheme());
                 IntermediateFileCleaner.Instance().registerStorage(storage);
-                return new PixelsPageSource(pixelsSplit, pixelsColumns, includeCols, storage, cacheFile, indexFile,
+                return new PixelsPageSource(pixelsSplit, pixelsColumns, includeCols, storage, cacheFiles, indexFiles,
                         pixelsFooterCache, getLambdaOutput(pixelsSplit, includeCols, projection), null);
             }
             else
@@ -135,7 +143,7 @@ public class PixelsPageSourceProvider
                 this.localSplitCounter.incrementAndGet();
                 Storage storage = StorageFactory.Instance().getStorage(pixelsSplit.getStorageScheme());
                 return new PixelsPageSource(pixelsSplit, pixelsColumns, includeCols, storage,
-                        cacheFile, indexFile, pixelsFooterCache, null, this.localSplitCounter);
+                        cacheFiles, indexFiles, pixelsFooterCache, null, this.localSplitCounter);
             }
         } catch (IOException e)
         {
