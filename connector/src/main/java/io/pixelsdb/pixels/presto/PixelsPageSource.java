@@ -86,7 +86,7 @@ class PixelsPageSource implements ConnectorPageSource
 
     public PixelsPageSource(PixelsSplit split, List<PixelsColumnHandle> columnHandles, String[] includeCols,
                             Storage storage, List<MemoryMappedFile> cacheFiles, List<MemoryMappedFile> indexFiles,
-                            PixelsFooterCache pixelsFooterCache, CompletableFuture<?> lambdaOutput,
+                            int swapZoneNum, PixelsFooterCache pixelsFooterCache, CompletableFuture<?> lambdaOutput,
                             AtomicInteger localSplitCounter)
     {
         this.split = split;
@@ -103,9 +103,9 @@ class PixelsPageSource implements ConnectorPageSource
 
         this.cacheReader = PixelsCacheReader
                 .newBuilder()
-                .setCacheFile(cacheFiles)
-                .setIndexFile(indexFiles.isEmpty() ? null : indexFiles.subList(0, indexFiles.size() - 1))
-                .setGlobalIndexFile(indexFiles.isEmpty() ? null : indexFiles.get(indexFiles.size() - 1))
+                .setCacheFiles(cacheFiles, swapZoneNum)
+                .setIndexFiles(indexFiles.isEmpty() ? null : indexFiles.subList(0, indexFiles.size() - 1),
+                        indexFiles.isEmpty() ? null : indexFiles.get(indexFiles.size() - 1))
                 .build();
 
         if (this.lambdaOutput == null)

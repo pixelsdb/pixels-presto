@@ -65,6 +65,7 @@ public class PixelsPageSourceProvider
     private final List<MemoryMappedFile> cacheFiles;
     private final List<MemoryMappedFile> indexFiles;
     private final PixelsFooterCache pixelsFooterCache;
+    private final int swapZoneNum;
     private final PixelsPrestoConfig config;
 
     private final AtomicInteger localSplitCounter;
@@ -79,7 +80,7 @@ public class PixelsPageSourceProvider
         {
             // NOTICE: creating a MemoryMappedFile is efficient, usually cost tens of us.
             int zoneNum = Integer.parseInt(config.getConfigFactory().getProperty("cache.zone.num"));
-            int swapZoneNum = Integer.parseInt(config.getConfigFactory().getProperty("cache.zone.swap.num"));
+            this.swapZoneNum = Integer.parseInt(config.getConfigFactory().getProperty("cache.zone.swap.num"));
             long zoneSize = Long.parseLong(config.getConfigFactory().getProperty("cache.size")) / (zoneNum - swapZoneNum);
             long zoneIndexSize = Long.parseLong(config.getConfigFactory().getProperty("index.size")) / (zoneNum - swapZoneNum);
             String zoneLocationPrefix = config.getConfigFactory().getProperty("cache.location");
@@ -96,6 +97,7 @@ public class PixelsPageSourceProvider
         {
             this.cacheFiles = new java.util.ArrayList<>();
             this.indexFiles = new java.util.ArrayList<>();
+            this.swapZoneNum = 0;
         }
         this.pixelsFooterCache = new PixelsFooterCache();
         this.localSplitCounter = new AtomicInteger(0);
@@ -136,14 +138,14 @@ public class PixelsPageSourceProvider
                 Storage storage = StorageFactory.Instance().getStorage(config.getOutputStorageScheme());
                 IntermediateFileCleaner.Instance().registerStorage(storage);
                 return new PixelsPageSource(pixelsSplit, pixelsColumns, includeCols, storage, cacheFiles, indexFiles,
-                        pixelsFooterCache, getLambdaOutput(pixelsSplit, includeCols, projection), null);
+                        swapZoneNum, pixelsFooterCache, getLambdaOutput(pixelsSplit, includeCols, projection), null);
             }
             else
             {
                 this.localSplitCounter.incrementAndGet();
                 Storage storage = StorageFactory.Instance().getStorage(pixelsSplit.getStorageScheme());
                 return new PixelsPageSource(pixelsSplit, pixelsColumns, includeCols, storage,
-                        cacheFiles, indexFiles, pixelsFooterCache, null, this.localSplitCounter);
+                        cacheFiles, indexFiles, swapZoneNum, pixelsFooterCache, null, this.localSplitCounter);
             }
         } catch (IOException e)
         {
