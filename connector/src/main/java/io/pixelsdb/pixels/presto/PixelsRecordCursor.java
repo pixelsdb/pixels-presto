@@ -85,8 +85,8 @@ public class PixelsRecordCursor implements RecordCursor
     private int rowIndex;
 
     public PixelsRecordCursor(PixelsSplit split, List<PixelsColumnHandle> columnHandles, Storage storage,
-                              List<MemoryMappedFile> cacheFiles, List<MemoryMappedFile> indexFiles, PixelsFooterCache footerCache,
-                              String connectorId)
+                              List<MemoryMappedFile> cacheFiles, List<MemoryMappedFile> indexFiles, int swapZoneNum,
+                              PixelsFooterCache footerCache, String connectorId)
     {
         this.split = split;
         this.storage = storage;
@@ -106,9 +106,9 @@ public class PixelsRecordCursor implements RecordCursor
 
         this.cacheReader = PixelsCacheReader
                 .newBuilder()
-                .setCacheFile(cacheFiles)
-                .setIndexFile(indexFiles.isEmpty() ? null : indexFiles.subList(0, indexFiles.size() - 1))
-                .setGlobalIndexFile(indexFiles.isEmpty() ? null : indexFiles.get(indexFiles.size() - 1))
+                 .setCacheFiles(cacheFiles, swapZoneNum)
+                .setIndexFiles(indexFiles.isEmpty() ? null : indexFiles.subList(0, indexFiles.size() - 1),
+                        indexFiles.isEmpty() ? null : indexFiles.get(indexFiles.size() - 1))
                 .build();
         readFirstPath(split, cacheReader, footerCache);
     }

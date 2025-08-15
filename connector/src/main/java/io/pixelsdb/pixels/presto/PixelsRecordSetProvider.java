@@ -46,6 +46,7 @@ public class PixelsRecordSetProvider implements ConnectorRecordSetProvider
     private final String connectorId;
     private final List<MemoryMappedFile> cacheFiles;
     private final List<MemoryMappedFile> indexFiles;
+    private final int swapZoneNum;
     private final PixelsFooterCache pixelsFooterCache;
     private final PixelsPrestoConfig config;
 
@@ -58,7 +59,7 @@ public class PixelsRecordSetProvider implements ConnectorRecordSetProvider
         {
             // NOTICE: creating a MemoryMappedFile is efficient, usually cost tens of us.
             int zoneNum = Integer.parseInt(config.getConfigFactory().getProperty("cache.zone.num"));
-            int swapZoneNum = Integer.parseInt(config.getConfigFactory().getProperty("cache.zone.swap.num"));
+            this.swapZoneNum = Integer.parseInt(config.getConfigFactory().getProperty("cache.zone.swap.num"));
             long zoneSize = Long.parseLong(config.getConfigFactory().getProperty("cache.size")) / (zoneNum - swapZoneNum);
             long zoneIndexSize = Long.parseLong(config.getConfigFactory().getProperty("index.size")) / (zoneNum - swapZoneNum);
             String zoneLocationPrefix = config.getConfigFactory().getProperty("cache.location");
@@ -75,6 +76,7 @@ public class PixelsRecordSetProvider implements ConnectorRecordSetProvider
         {
             this.cacheFiles = new java.util.ArrayList<>();
             this.indexFiles = new java.util.ArrayList<>();
+            this.swapZoneNum = 0;
         }
         this.pixelsFooterCache = new PixelsFooterCache();
         this.config = config;
@@ -106,6 +108,7 @@ public class PixelsRecordSetProvider implements ConnectorRecordSetProvider
             throw new PrestoException(PixelsErrorCode.PIXELS_STORAGE_ERROR, e);
         }
 
-        return new PixelsRecordSet(pixelsSplit, pixelsColumns, storage, cacheFiles, indexFiles, pixelsFooterCache, connectorId);
+        return new PixelsRecordSet(pixelsSplit, pixelsColumns, storage, cacheFiles, indexFiles, swapZoneNum,
+                pixelsFooterCache, connectorId);
     }
 }
